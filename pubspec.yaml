@@ -1,5 +1,5 @@
 name: more_than_wrap
-description: "A new Flutter package project."
+description: "A Flutter package that provides a custom Wrap widget with limited number of rows and optional overflow widget display."
 version: 0.0.1
 homepage:
 

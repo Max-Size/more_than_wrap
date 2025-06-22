@@ -11,29 +11,123 @@ and the Flutter guide for
 [developing packages and plugins](https://flutter.dev/to/develop-packages).
 -->
 
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
+# more_than_wrap
+
+A Flutter package that provides a custom `Wrap` widget with limited number of rows and optional overflow widget display.
 
 ## Features
 
-TODO: List what your package can do. Maybe include images, gifs, or videos.
+- **Limited Rows**: Set a maximum number of rows for the wrap layout
+- **Overflow Handling**: Display a custom widget when content overflows
+- **Flexible Spacing**: Configure spacing between elements and rows
+- **Real-time Updates**: Get notified when overflow occurs with the number of overflowed elements
 
 ## Getting started
 
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
+Add this package to your `pubspec.yaml`:
+
+```yaml
+dependencies:
+  more_than_wrap: ^0.0.1
+```
+
+Then run:
+```bash
+flutter pub get
+```
 
 ## Usage
 
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder.
+### Basic Usage
 
 ```dart
-const like = 'sample';
+import 'package:more_than_wrap/more_than_wrap.dart';
+
+LimitedWrapWidget(
+  maxLines: 2, // Maximum 2 rows
+  spacing: 8.0, // Spacing between elements
+  runSpacing: 4.0, // Spacing between rows
+  children: [
+    Chip(label: Text('Tag 1')),
+    Chip(label: Text('Tag 2')),
+    Chip(label: Text('Tag 3')),
+    // ... more widgets
+  ],
+)
+```
+
+### With Overflow Widget
+
+```dart
+LimitedWrapWidget(
+  maxLines: 2,
+  spacing: 8.0,
+  runSpacing: 4.0,
+  overflowWidgetBuilder: (overflowCount) {
+    return Chip(
+      label: Text('+$overflowCount more'),
+      backgroundColor: Colors.grey[300],
+    );
+  },
+  children: [
+    Chip(label: Text('Tag 1')),
+    Chip(label: Text('Tag 2')),
+    // ... more widgets
+  ],
+)
+```
+
+### Advanced Usage with Callback
+
+```dart
+LimitedWrapWidget(
+  maxLines: 3,
+  spacing: 12.0,
+  runSpacing: 8.0,
+  overflowWidgetBuilder: (overflowCount) {
+    if (overflowCount == null) return SizedBox.shrink();
+    return GestureDetector(
+      onTap: () {
+        // Handle overflow tap
+        print('$overflowCount items overflowed');
+      },
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.blue,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Text(
+          '+$overflowCount',
+          style: TextStyle(color: Colors.white),
+        ),
+      ),
+    );
+  },
+  children: yourWidgetList,
+)
 ```
 
 ## Additional information
 
-TODO: Tell users more about the package: where to find more information, how to
-contribute to the package, how to file issues, what response they can expect
-from the package authors, and more.
+This package is useful for:
+- Tag clouds with limited height
+- Chip lists that need to fit in constrained spaces
+- Any layout where you want to show a limited number of rows with overflow indication
+
+### Key Components
+
+- `LimitedWrapWidget`: The main widget that provides the limited wrap functionality
+- `OnWidgetsLayouted`: Callback function type for overflow notifications
+- Custom render objects for efficient layout calculations
+
+### Contributing
+
+Feel free to contribute to this package by:
+- Reporting bugs
+- Suggesting new features
+- Submitting pull requests
+
+### License
+
+This package is licensed under the MIT License.
