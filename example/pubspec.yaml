@@ -25,9 +25,7 @@ dependencies:
   flutter:
     sdk: flutter
   more_than_wrap: 
-    path: ../more_than_wrap
-  scroll_to_index: ^3.0.1
-
+    path: ../
 
 dev_dependencies:
   flutter_test:
