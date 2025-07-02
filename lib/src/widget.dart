@@ -1,4 +1,6 @@
-part of '../more_than_wrap.dart';
+import 'package:flutter/widgets.dart';
+import 'package:more_than_wrap/src/overflow_style.dart';
+import 'package:more_than_wrap/src/render_widgets/builder.dart';
 
 /// Builder function for overflow widget
 ///
@@ -7,7 +9,7 @@ typedef OnWidgetsLayouted = Widget Function(int? amountOfOverflowedWidgets);
 /// Custom [Wrap] widget with limited number of rows and
 /// optional widget for overflow display
 ///
-class LimitedWrapWidget extends StatelessWidget {
+class LimitedWrapWidget extends StatefulWidget {
   /// Children widgets
   final List<Widget> children;
 
@@ -23,21 +25,38 @@ class LimitedWrapWidget extends StatelessWidget {
   /// Maximum number of rows
   final int? maxLines;
 
-  /// Notifier that will call [overflowWidgetBuilder] when receiving
-  /// the number of overflowed elements
-  ///
-  final amountOfOverflowedWidgetsNotifier = ValueNotifier<int?>(null);
+  /// Style for overflow widget
+  final OverflowBuilderStyle? overflowBuilderStyle;
 
-  LimitedWrapWidget({
+  const LimitedWrapWidget({
+    super.key,
+    required this.overflowBuilderStyle,
+    required this.children,
+    required this.spacing,
+    required this.runSpacing,
+    this.maxLines,
+  }) : overflowWidgetBuilder = null;
+
+  const LimitedWrapWidget.builder({
     super.key,
     this.overflowWidgetBuilder,
     required this.children,
     required this.spacing,
     required this.runSpacing,
     this.maxLines,
-  });
+  }) : overflowBuilderStyle = null;
 
-  /// Wrap [overflowWidgetBuilder] in [ValueListenableBuilder]
+  @override
+  State<LimitedWrapWidget> createState() => _LimitedWrapWidgetState();
+}
+
+class _LimitedWrapWidgetState extends State<LimitedWrapWidget> {
+  /// Notifier that will call [widget.overflowWidgetBuilder] when receiving
+  /// the number of overflowed elements
+  ///
+  final amountOfOverflowedWidgetsNotifier = ValueNotifier<int?>(null);
+
+  /// Wrap [widget.overflowWidgetBuilder] in [ValueListenableBuilder]
   /// to rebuild the widget when a new value becomes known
   /// for the number of overflowed elements
   ///
@@ -48,27 +67,34 @@ class LimitedWrapWidget extends StatelessWidget {
   ///
   @override
   Widget build(BuildContext context) {
-    final overflowWidget = overflowWidgetBuilder != null
+    final overflowWidget = widget.overflowWidgetBuilder != null
         ? ValueListenableBuilder<int?>(
             valueListenable: amountOfOverflowedWidgetsNotifier,
-            builder: (context, value, child) => overflowWidgetBuilder!(value),
+            builder: (context, value, child) =>
+                widget.overflowWidgetBuilder!(value),
           )
         : null;
 
     final widgets = [
-      ...children,
+      ...widget.children,
       if (overflowWidget != null) overflowWidget,
     ];
 
-    return LimitedWrap(
-      spacing: spacing,
-      runSpacing: runSpacing,
-      maxLines: maxLines,
+    return LimitedWrapWidgetBuilder(
+      spacing: widget.spacing,
+      runSpacing: widget.runSpacing,
+      maxLines: widget.maxLines,
       onWidgetsLayouted: (amountOfOverflowedWidgets) {
         amountOfOverflowedWidgetsNotifier.value = amountOfOverflowedWidgets;
       },
-      isOverflowedWidgetAdded: overflowWidget != null,
+      isOverflowWidgetAdded: overflowWidget != null,
       children: widgets,
     );
+  }
+
+  @override
+  void dispose() {
+    amountOfOverflowedWidgetsNotifier.dispose();
+    super.dispose();
   }
 }

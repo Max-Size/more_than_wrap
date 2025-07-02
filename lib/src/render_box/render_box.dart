@@ -1,6 +1,6 @@
-// ignore_for_file: lines_longer_than_80_chars
+import 'dart:math';
 
-part of '../more_than_wrap.dart';
+import 'package:flutter/rendering.dart';
 
 /// ParentData for [_ExtendedRenderWrap]
 ///
@@ -9,19 +9,19 @@ class LimitWrapParentData extends ContainerBoxParentData<RenderBox> {}
 /// Custom [RenderBox] for creating [Wrap] with limited number of rows
 /// and indicator of overflowed elements
 ///
-class _ExtendedRenderWrap extends RenderBox
+abstract class ExtendedRenderWrap<T> extends RenderBox
     with
         ContainerRenderObjectMixin<RenderBox, LimitWrapParentData>,
         RenderBoxContainerDefaultsMixin<RenderBox, LimitWrapParentData> {
-  _ExtendedRenderWrap({
+  ExtendedRenderWrap({
     List<RenderBox>? children,
     required this.runSpacing,
     required this.spacing,
-    void Function(int)? onWidgetsLayouted,
+    T Function(int)? onWidgetsLayouted,
     int? maxLines,
     required this.isOverflowWidgetAdded,
-  })  : _onWidgetsLayouted = onWidgetsLayouted,
-        _maxLines = maxLines {
+  }) : onWidgetsLayoutedInternal = onWidgetsLayouted,
+       _maxLines = maxLines {
     addAll(children);
   }
 
@@ -37,7 +37,7 @@ class _ExtendedRenderWrap extends RenderBox
   /// Zero constraints for those [RenderBox]'s that we won't
   /// display on screen
   ///
-  static const _shrinkedConstraints = BoxConstraints(maxWidth: 0, maxHeight: 0);
+  static const shrinkedConstraints = BoxConstraints(maxWidth: 0, maxHeight: 0);
 
   /// Spacing between elements in the same row
   final double spacing;
@@ -51,7 +51,7 @@ class _ExtendedRenderWrap extends RenderBox
   /// Function that will be called at the moment when we
   /// learn the number of overflowed elements
   ///
-  void Function(int amountOfOverflowedWidgets)? _onWidgetsLayouted;
+  void Function(int amountOfOverflowedWidgets)? onWidgetsLayoutedInternal;
 
   /// Flag that shows whether a widget has been added that
   /// needs to be displayed on overflow
@@ -70,13 +70,13 @@ class _ExtendedRenderWrap extends RenderBox
     markNeedsLayout();
   }
 
-  /// Setter for [onWidgetsLayouted] function
+  /// Setter for [onWidgetsLayoutedInternal] function
   ///
   /// When updated, the [calculatedOverflow] flag is reset
   /// and redraw is triggered
   ///
   set onWidgetsLayouted(void Function(int amountOfOverflowedWidgets)? fun) {
-    _onWidgetsLayouted = fun;
+    onWidgetsLayoutedInternal = fun;
     calculatedOverflow = false;
     markNeedsLayout();
   }
@@ -99,14 +99,37 @@ class _ExtendedRenderWrap extends RenderBox
     }
   }
 
+  /// Number of overflowed elements
+  int objectsOverflowed = 0;
+
+  /// Initial coordinates of the penultimate rendered
+  /// child element
+  ///
+  Offset? penultimateRenderedChildOffset;
+
+  /// Penultimate rendered child element
+  RenderBox? penultimateRenderedChild;
+
+  /// Offset coordinates for displaying the current element
+  double dx = 0;
+  double dy = 0;
+
+  /// Last rendered child element
+  RenderBox? lastRenderedChild;
+
+  @override
+  BoxConstraints get constraints =>
+      super.constraints.copyWith(minWidth: 0, minHeight: 0);
+
   /// Main function containing all the logic for building elements
   ///
   /// In it we will draw all children
   ///
   @override
   void performLayout() {
-    /// Number of overflowed elements
-    int objectsOverflowed = 0;
+    objectsOverflowed = 0;
+    dx = 0;
+    dy = 0;
 
     /// Total number of children
     var allElements = childCount;
@@ -115,9 +138,6 @@ class _ExtendedRenderWrap extends RenderBox
     /// since it won't be counted in the number of widgets to draw
     ///
     if (isOverflowWidgetAdded) allElements -= 1;
-
-    /// Get parent constraints
-    final constraints = this.constraints.copyWith(minWidth: 0, minHeight: 0);
 
     /// Get the first child element
     RenderBox? child = firstChild;
@@ -130,10 +150,6 @@ class _ExtendedRenderWrap extends RenderBox
       return;
     }
 
-    /// Offset coordinates for displaying the current element
-    double dx = 0;
-    double dy = 0;
-
     /// Maximum height of element for current row
     double maxYPerRow = 0;
 
@@ -143,17 +159,6 @@ class _ExtendedRenderWrap extends RenderBox
     /// Index of current element
     int curIndex = 0;
 
-    /// Initial coordinates of the penultimate rendered
-    /// child element
-    ///
-    Offset? penultimateRenderedChildOffset;
-
-    /// Penultimate rendered child element
-    RenderBox? penultimateRenderedChild;
-
-    /// Last rendered child element
-    RenderBox? lastRenderedChild;
-
     /// Flag showing that elements are overflowed
     bool hasOverflow = false;
 
@@ -161,10 +166,7 @@ class _ExtendedRenderWrap extends RenderBox
     void passChild() {
       objectsOverflowed++;
       curIndex++;
-      child?.layout(
-        _shrinkedConstraints,
-        parentUsesSize: true,
-      );
+      child?.layout(shrinkedConstraints, parentUsesSize: true);
       final LimitWrapParentData childParentData =
           child?.parentData as LimitWrapParentData;
       child = childParentData.nextSibling;
@@ -288,77 +290,13 @@ class _ExtendedRenderWrap extends RenderBox
     ///                  Mark constraints for all parent [RenderBox]
     ///
     if (isOverflowWidgetAdded) {
-      final overflowRender = lastChild;
-      if (!hasOverflow) {
-        overflowRender?.layout(
-          _shrinkedConstraints,
-          parentUsesSize: true,
-        );
-      } else {
-        if (isHideLastItemIfOverflowed) {
-          dx -= lastRenderedChild!.size.width + spacing;
-
-          /// Case when dx == 0 is possible if child on last row occupied all width,
-          /// in such case move overflow widget to previous row and shift right
-          /// on width of widget from previous row
-          if (dx == 0 &&
-              penultimateRenderedChildOffset != null &&
-              penultimateRenderedChild != null) {
-            overflowRender?.layout(constraints, parentUsesSize: true);
-            final size = overflowRender!.size;
-
-            final potentialXOverflowWidgetEndOffset =
-                penultimateRenderedChildOffset.dx +
-                    penultimateRenderedChild.size.width +
-                    spacing +
-                    size.width;
-
-            /// If overflow widget does not go beyond border, then shift it
-            if (potentialXOverflowWidgetEndOffset <= constraints.maxWidth) {
-              dx += penultimateRenderedChildOffset.dx +
-                  penultimateRenderedChild.size.width +
-                  spacing;
-              dy -= penultimateRenderedChild.size.height + runSpacing;
-            }
-          }
-          lastRenderedChild.layout(
-            _shrinkedConstraints,
-            parentUsesSize: true,
-          );
-        }
-        if (!calculatedOverflow) {
-          Future.microtask(() {
-            calculatedOverflow = true;
-            _onWidgetsLayouted?.call(objectsOverflowed);
-            objectsOverflowed = 0;
-          });
-        }
-
-        overflowRender?.layout(constraints, parentUsesSize: true);
-        final childParentData =
-            overflowRender?.parentData as LimitWrapParentData?;
-        childParentData?.offset = Offset(dx, dy);
-
-        /// More reliable condition, but answers less requirements
-        /// In case of critical bugs return its use
-        ///
-        ///if(childParentData!.offset.dx + overflowRender!.size.width > constraints.maxWidth && calculatedOverflow)
-        final endOverflowRenderXOffset =
-            childParentData!.offset.dx + overflowRender!.size.width;
-        if ((endOverflowRenderXOffset > constraints.maxWidth ||
-                objectsOverflowed == 1) &&
-            calculatedOverflow) {
-          isHideLastItemIfOverflowed = true;
-          objectsOverflowed++;
-          Future.microtask(() {
-            _onWidgetsLayouted?.call(objectsOverflowed);
-            objectsOverflowed = 0;
-          });
-        }
-      }
+      layoutOverflowIndicator(hasOverflow);
     }
-    size = constraints.constrain(Size(constraints.maxWidth, dy + maxYPerRow));
+    final height = max(dy + maxYPerRow, this.constraints.minHeight);
+    size = constraints.constrain(Size(constraints.maxWidth, height));
   }
+
+  void layoutOverflowIndicator(bool hasOverflow) {}
 
   /// Add [RenderBox]'s ability to handle taps
   @override
@@ -369,6 +307,12 @@ class _ExtendedRenderWrap extends RenderBox
   /// Draw result
   @override
   void paint(PaintingContext context, Offset offset) {
-    defaultPaint(context, offset);
+    RenderBox? child = firstChild;
+    while (child != null) {
+      final LimitWrapParentData childParentData =
+          child.parentData! as LimitWrapParentData;
+      context.paintChild(child, childParentData.offset + offset);
+      child = childParentData.nextSibling;
+    }
   }
 }
