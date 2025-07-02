@@ -121,23 +121,23 @@ class _SliderControlWidgetState extends State<SliderControlWidget> {
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(8.0),
-                  child: LimitedWrapWidget.builder(
+                  child: LimitedWrapWidget(
                     spacing: 8,
                     runSpacing: 8,
                     maxLines: maxLines.toInt(),
-                    overflowWidgetBuilder: (amountOfOverflowedWidgets) =>
-                        DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: Colors.red.shade100,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.red.shade300),
+                    overflowBuilderStyle: OverflowBuilderStyle(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Text(
-                          'Overflow: ${amountOfOverflowedWidgets.toString()}',
-                        ),
+                      color: Colors.red.shade500,
+                      radius: const Radius.circular(8),
+                      border: Border.all(
+                        color: Colors.red.shade700,
+                        width: 1.5,
                       ),
+                      textBuilder: (amountOfOverflowedWidgets) =>
+                          '+$amountOfOverflowedWidgets more',
                     ),
                     children: List.generate(
                       itemCount,

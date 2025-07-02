@@ -289,14 +289,14 @@ abstract class ExtendedRenderWrap<T> extends RenderBox
     ///                                         |
     ///                  Mark constraints for all parent [RenderBox]
     ///
-    if (isOverflowWidgetAdded) {
-      layoutOverflowIndicator(hasOverflow);
-    }
+
+    layoutOverflowIndicator(hasOverflow);
+
     final height = max(dy + maxYPerRow, this.constraints.minHeight);
     size = constraints.constrain(Size(constraints.maxWidth, height));
   }
 
-  void layoutOverflowIndicator(bool hasOverflow) {}
+  void layoutOverflowIndicator(bool hasOverflow);
 
   /// Add [RenderBox]'s ability to handle taps
   @override

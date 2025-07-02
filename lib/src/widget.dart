@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:more_than_wrap/src/overflow_style.dart';
 import 'package:more_than_wrap/src/render_widgets/builder.dart';
+import 'package:more_than_wrap/src/render_widgets/styler.dart';
 
 /// Builder function for overflow widget
 ///
@@ -67,29 +68,41 @@ class _LimitedWrapWidgetState extends State<LimitedWrapWidget> {
   ///
   @override
   Widget build(BuildContext context) {
-    final overflowWidget = widget.overflowWidgetBuilder != null
-        ? ValueListenableBuilder<int?>(
-            valueListenable: amountOfOverflowedWidgetsNotifier,
-            builder: (context, value, child) =>
-                widget.overflowWidgetBuilder!(value),
-          )
-        : null;
+    final overflowBuilder = widget.overflowWidgetBuilder;
+    if (overflowBuilder != null) {
+      final overflowWidget = widget.overflowWidgetBuilder != null
+          ? ValueListenableBuilder<int?>(
+              valueListenable: amountOfOverflowedWidgetsNotifier,
+              builder: (context, value, child) =>
+                  widget.overflowWidgetBuilder!(value),
+            )
+          : null;
 
-    final widgets = [
-      ...widget.children,
-      if (overflowWidget != null) overflowWidget,
-    ];
+      final widgets = [
+        ...widget.children,
+        if (overflowWidget != null) overflowWidget,
+      ];
 
-    return LimitedWrapWidgetBuilder(
-      spacing: widget.spacing,
-      runSpacing: widget.runSpacing,
-      maxLines: widget.maxLines,
-      onWidgetsLayouted: (amountOfOverflowedWidgets) {
-        amountOfOverflowedWidgetsNotifier.value = amountOfOverflowedWidgets;
-      },
-      isOverflowWidgetAdded: overflowWidget != null,
-      children: widgets,
-    );
+      return LimitedWrapWidgetBuilder(
+        spacing: widget.spacing,
+        runSpacing: widget.runSpacing,
+        maxLines: widget.maxLines,
+        onWidgetsLayouted: (amountOfOverflowedWidgets) {
+          amountOfOverflowedWidgetsNotifier.value = amountOfOverflowedWidgets;
+        },
+        isOverflowWidgetAdded: overflowWidget != null,
+        children: widgets,
+      );
+    } else {
+      return LimitedWrapWidgetStyler(
+        spacing: widget.spacing,
+        runSpacing: widget.runSpacing,
+        maxLines: widget.maxLines,
+        overflowBuilderStyle: widget.overflowBuilderStyle,
+        onWidgetsLayouted: widget.overflowBuilderStyle?.textBuilder,
+        children: widget.children,
+      );
+    }
   }
 
   @override

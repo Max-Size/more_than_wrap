@@ -14,6 +14,9 @@ class ExtendedRenderWrapWidgetBuilder extends ExtendedRenderWrap<void> {
 
   @override
   void layoutOverflowIndicator(bool hasOverflow) {
+    if (!isOverflowWidgetAdded) {
+      return;
+    }
     final overflowRender = lastChild;
     if (!hasOverflow) {
       overflowRender?.layout(

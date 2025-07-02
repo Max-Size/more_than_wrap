@@ -5,7 +5,7 @@ class OverflowBuilderStyle {
   final TextStyle? textStyle;
   final BoxBorder? border;
   final String Function(int amountOfOverflowedWidgets) textBuilder;
-  final BorderRadiusGeometry? borderRadius;
+  final Radius? radius;
   final Color? color;
   final VoidCallback? onTap;
 
@@ -14,7 +14,7 @@ class OverflowBuilderStyle {
     this.textStyle,
     this.padding = EdgeInsets.zero,
     this.border,
-    this.borderRadius,
+    this.radius,
     this.color = const Color(0xFF000000),
     this.onTap,
   });
