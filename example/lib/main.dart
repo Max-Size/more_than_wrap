@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:more_than_wrap/more_than_wrap.dart';
 
@@ -126,9 +128,11 @@ class _SliderControlWidgetState extends State<SliderControlWidget> {
                     runSpacing: 8,
                     maxLines: maxLines.toInt(),
                     overflowBuilderStyle: OverflowBuilderStyle(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
+                      padding: const EdgeInsets.only(
+                        left: 8,
+                        right: 8,
+                        top: 20,
+                        bottom: 4,
                       ),
                       color: Colors.red.shade500,
                       radius: const Radius.circular(8),
@@ -138,6 +142,9 @@ class _SliderControlWidgetState extends State<SliderControlWidget> {
                       ),
                       textBuilder: (amountOfOverflowedWidgets) =>
                           '+$amountOfOverflowedWidgets more',
+                      onTap: () {
+                        log('Tapped!');
+                      },
                     ),
                     children: List.generate(
                       itemCount,
