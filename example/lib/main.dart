@@ -123,61 +123,104 @@ class _SliderControlWidgetState extends State<SliderControlWidget> {
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(8.0),
-                  child: LimitedWrapWidget(
-                    spacing: 8,
-                    runSpacing: 8,
-                    maxLines: maxLines.toInt(),
-                    overflowBuilderStyle: OverflowBuilderStyle(
-                      padding: const EdgeInsets.only(
-                        left: 8,
-                        right: 8,
-                        top: 20,
-                        bottom: 4,
-                      ),
-                      color: Colors.red.shade500,
-                      radius: const Radius.circular(8),
-                      border: Border.all(
-                        color: Colors.red.shade700,
-                        width: 1.5,
-                      ),
-                      textBuilder: (amountOfOverflowedWidgets) =>
-                          '+$amountOfOverflowedWidgets more',
-                      onTap: () {
-                        log('Tapped!');
-                      },
-                    ),
-                    children: List.generate(
-                      itemCount,
-                      (index) => Container(
-                        width: itemWidth,
-                        decoration: BoxDecoration(
-                          color: Colors.blue.shade100,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.blue.shade300),
-                        ),
-                        padding: EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Item ${index + 1}',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.blue.shade800,
-                              ),
+                  child: Center(
+                    child: SizedBox(
+                      width: 200,
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          log('constraints: $constraints');
+                          return LimitedWrapWidget(
+                            children: List.generate(
+                                10,
+                                (i) => sizedChild('Item $i',
+                                    key: ValueKey('item_$i'))),
+                            spacing: 0,
+                            runSpacing: 0,
+                            maxLines: 1,
+                            overflowBuilderStyle: OverflowBuilderStyle(
+                              textBuilder: (count) => '+$count more',
+                              textStyle: const TextStyle(
+                                  fontSize: 14, color: Colors.red),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
                             ),
-                          ],
-                        ),
+                          );
+                        },
                       ),
                     ),
                   ),
+                  // LimitedWrapWidget(
+                  //   spacing: 8,
+                  //   runSpacing: 8,
+                  //   maxLines: maxLines.toInt(),
+                  //   overflowBuilderStyle: OverflowBuilderStyle(
+                  //     padding: const EdgeInsets.only(
+                  //       left: 8,
+                  //       right: 8,
+                  //       top: 20,
+                  //       bottom: 4,
+                  //     ),
+                  //     color: Colors.red.shade500,
+                  //     radius: const Radius.circular(8),
+                  //     border: Border.all(
+                  //       color: Colors.red.shade700,
+                  //       width: 1.5,
+                  //     ),
+                  //     textBuilder: (amountOfOverflowedWidgets) =>
+                  //         '+$amountOfOverflowedWidgets more',
+                  //     onTap: () {
+                  //       log('Tapped!');
+                  //     },
+                  //   ),
+                  //   children: List.generate(
+                  //     itemCount,
+                  //     (index) => Container(
+                  //       width: itemWidth,
+                  //       decoration: BoxDecoration(
+                  //         color: Colors.blue.shade100,
+                  //         borderRadius: BorderRadius.circular(8),
+                  //         border: Border.all(color: Colors.blue.shade300),
+                  //       ),
+                  //       padding: EdgeInsets.all(12),
+                  //       child: Column(
+                  //         crossAxisAlignment: CrossAxisAlignment.start,
+                  //         mainAxisSize: MainAxisSize.min,
+                  //         children: [
+                  //           Text(
+                  //             'Item ${index + 1}',
+                  //             style: TextStyle(
+                  //               fontWeight: FontWeight.bold,
+                  //               color: Colors.blue.shade800,
+                  //             ),
+                  //           ),
+                  //         ],
+                  //       ),
+                  //     ),
+                  //   ),
+                  // ),
                 ),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget sizedChild(String text,
+      {Key? key, double width = 60, double height = 30}) {
+    return SizedBox(
+      width: width,
+      height: height,
+      child: Text(text, key: key),
+    );
+  }
+
+  SliverChildDelegate getSliverChildDelegate() {
+    return SliverChildBuilderDelegate(
+      (context, index) =>
+          sizedChild('Item $index', key: ValueKey('item_$index')),
+      childCount: 10,
     );
   }
 }
