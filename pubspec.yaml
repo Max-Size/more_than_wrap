@@ -1,7 +1,7 @@
 name: more_than_wrap
 description: "A Flutter package that provides a custom Wrap widget with limited number of rows and optional overflow widget display."
 version: 0.0.1
-homepage:
+repository: https://github.com/Max-Size/more_than_wrap
 
 environment:
   sdk: ^3.8.1

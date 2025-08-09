@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:more_than_wrap/more_than_wrap.dart';
 
@@ -18,7 +16,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         useMaterial3: true,
       ),
-      home: SliderControlWidget(),
+      home: const SliderControlWidget(),
     );
   }
 }
@@ -32,15 +30,16 @@ class SliderControlWidget extends StatefulWidget {
 
 class _SliderControlWidgetState extends State<SliderControlWidget> {
   // Variables controlled by sliders
-  double maxLines = 2.0;
-  double itemWidth = 150.0;
-  int itemCount = 10;
+  int maxLines = 2;
+  double itemWidth = 57.0;
+  int itemCount = 13;
+  bool useBuilder = true;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Slider Control Example'),
+        title: const Text('Slider Control Example'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       body: Padding(
@@ -56,17 +55,27 @@ class _SliderControlWidgetState extends State<SliderControlWidget> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Switch to toggle between implementations
+                    SwitchListTile(
+                      title: const Text('Use LimitedWrapWidget.builder'),
+                      value: useBuilder,
+                      onChanged: (value) {
+                        setState(() {
+                          useBuilder = value;
+                        });
+                      },
+                    ),
                     // MaxLines Slider
                     Text('Max Lines: ${maxLines.round()}'),
                     Slider(
-                      value: maxLines,
+                      value: maxLines.toDouble(),
                       min: 1.0,
                       max: 10.0,
                       divisions: 9,
                       label: maxLines.round().toString(),
                       onChanged: (value) {
                         setState(() {
-                          maxLines = value;
+                          maxLines = value.toInt();
                         });
                       },
                     ),
@@ -75,7 +84,7 @@ class _SliderControlWidgetState extends State<SliderControlWidget> {
                     Text('Item Width: ${itemWidth.round()}px'),
                     Slider(
                       value: itemWidth,
-                      min: 100.0,
+                      min: 30.0,
                       max: 300.0,
                       divisions: 20,
                       label: itemWidth.round().toString(),
@@ -105,14 +114,14 @@ class _SliderControlWidgetState extends State<SliderControlWidget> {
               ),
             ),
 
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
 
             // Visual demonstration area
             Text(
               'Visual Result:',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
 
             Expanded(
               child: Container(
@@ -124,80 +133,13 @@ class _SliderControlWidgetState extends State<SliderControlWidget> {
                 child: Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: Center(
-                    child: SizedBox(
-                      width: 200,
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          log('constraints: $constraints');
-                          return LimitedWrapWidget(
-                            children: List.generate(
-                                10,
-                                (i) => sizedChild('Item $i',
-                                    key: ValueKey('item_$i'))),
-                            spacing: 0,
-                            runSpacing: 0,
-                            maxLines: 1,
-                            overflowBuilderStyle: OverflowBuilderStyle(
-                              textBuilder: (count) => '+$count more',
-                              textStyle: const TextStyle(
-                                  fontSize: 14, color: Colors.red),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
-                            ),
-                          );
-                        },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 40.0,
                       ),
+                      child: limitedWrapWidget,
                     ),
                   ),
-                  // LimitedWrapWidget(
-                  //   spacing: 8,
-                  //   runSpacing: 8,
-                  //   maxLines: maxLines.toInt(),
-                  //   overflowBuilderStyle: OverflowBuilderStyle(
-                  //     padding: const EdgeInsets.only(
-                  //       left: 8,
-                  //       right: 8,
-                  //       top: 20,
-                  //       bottom: 4,
-                  //     ),
-                  //     color: Colors.red.shade500,
-                  //     radius: const Radius.circular(8),
-                  //     border: Border.all(
-                  //       color: Colors.red.shade700,
-                  //       width: 1.5,
-                  //     ),
-                  //     textBuilder: (amountOfOverflowedWidgets) =>
-                  //         '+$amountOfOverflowedWidgets more',
-                  //     onTap: () {
-                  //       log('Tapped!');
-                  //     },
-                  //   ),
-                  //   children: List.generate(
-                  //     itemCount,
-                  //     (index) => Container(
-                  //       width: itemWidth,
-                  //       decoration: BoxDecoration(
-                  //         color: Colors.blue.shade100,
-                  //         borderRadius: BorderRadius.circular(8),
-                  //         border: Border.all(color: Colors.blue.shade300),
-                  //       ),
-                  //       padding: EdgeInsets.all(12),
-                  //       child: Column(
-                  //         crossAxisAlignment: CrossAxisAlignment.start,
-                  //         mainAxisSize: MainAxisSize.min,
-                  //         children: [
-                  //           Text(
-                  //             'Item ${index + 1}',
-                  //             style: TextStyle(
-                  //               fontWeight: FontWeight.bold,
-                  //               color: Colors.blue.shade800,
-                  //             ),
-                  //           ),
-                  //         ],
-                  //       ),
-                  //     ),
-                  //   ),
-                  // ),
                 ),
               ),
             ),
@@ -207,12 +149,61 @@ class _SliderControlWidgetState extends State<SliderControlWidget> {
     );
   }
 
+  Widget get limitedWrapWidget => switch (useBuilder) {
+        true => LimitedWrapWidget.builder(
+            spacing: 0,
+            runSpacing: 0,
+            maxLines: maxLines.toInt(),
+            overflowWidgetBuilder: (count) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Text(
+                '+${count ?? 0} more',
+                style: const TextStyle(fontSize: 14, color: Colors.red),
+              ),
+            ),
+            children: List.generate(
+              itemCount,
+              (i) => sizedChild(
+                'Item $i',
+                key: ValueKey('item_$i'),
+                width: itemWidth,
+              ),
+            ),
+          ),
+        false => LimitedWrapWidget(
+            spacing: 0,
+            runSpacing: 0,
+            maxLines: maxLines.toInt(),
+            overflowBuilderStyle: OverflowBuilderStyle(
+              textBuilder: (count) => '+$count more',
+              textStyle: const TextStyle(fontSize: 14, color: Colors.red),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            ),
+            children: List.generate(
+              itemCount,
+              (i) => sizedChild(
+                'Item $i',
+                key: ValueKey('item_$i'),
+                width: itemWidth,
+              ),
+            ),
+          ),
+      };
+
   Widget sizedChild(String text,
       {Key? key, double width = 60, double height = 30}) {
-    return SizedBox(
-      width: width,
-      height: height,
-      child: Text(text, key: key),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: Colors.grey),
+      ),
+      child: SizedBox(
+        width: width,
+        height: height,
+        child: Center(
+          child: Text(text, key: key),
+        ),
+      ),
     );
   }
 

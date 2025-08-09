@@ -66,7 +66,7 @@ abstract class ExtendedRenderWrap<T> extends RenderBox
   set maxLines(int? value) {
     if (_maxLines == value) return;
     _maxLines = value;
-    calculatedOverflow = false;
+    // calculatedOverflow = false;
     markNeedsLayout();
   }
 
@@ -77,7 +77,7 @@ abstract class ExtendedRenderWrap<T> extends RenderBox
   ///
   set onWidgetsLayouted(void Function(int amountOfOverflowedWidgets)? fun) {
     onWidgetsLayoutedInternal = fun;
-    calculatedOverflow = false;
+    // calculatedOverflow = false;
     markNeedsLayout();
   }
 
@@ -88,7 +88,7 @@ abstract class ExtendedRenderWrap<T> extends RenderBox
   ///
   void onUpdate() {
     isHideLastItemIfOverflowed = false;
-    calculatedOverflow = false;
+    // calculatedOverflow = false;
   }
 
   /// Set parentData for [RenderBox]

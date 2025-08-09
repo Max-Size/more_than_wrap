@@ -13,14 +13,18 @@ and the Flutter guide for
 
 # more_than_wrap
 
-A Flutter package that provides a custom `Wrap` widget with limited number of rows and optional overflow widget display.
+A Flutter package that provides a custom `Wrap`-like layout with a limited number of rows and an optional overflow indicator.
 
 ## Features
 
-- **Limited Rows**: Set a maximum number of rows for the wrap layout
-- **Overflow Handling**: Display a custom widget when content overflows
-- **Flexible Spacing**: Configure spacing between elements and rows
-- **Real-time Updates**: Get notified when overflow occurs with the number of overflowed elements
+- **Limited rows**: Restrict the layout to a maximum number of lines
+- **Two overflow strategies**:
+  - **Styler API**: draw a compact indicator (text) directly on canvas via `overflowBuilderStyle`
+  - **Builder API**: provide your own `Widget` via `LimitedWrapWidget.builder`
+- **Flexible spacing**: Configure `spacing` and `runSpacing`
+- **Overflow count**: Both strategies receive the number of overflowed children
+
+> Warning: The current release is experimental and may cause visible UI jank in certain cases (see details below).
 
 ## Getting started
 
@@ -38,88 +42,82 @@ flutter pub get
 
 ## Usage
 
-### Basic Usage
+### Option A: Styler API (drawn indicator via `overflowBuilderStyle`)
+
+Use `LimitedWrapWidget` with `overflowBuilderStyle` to draw a compact text indicator (for example, "+3"). This indicator is not a separate child; it is painted directly by the render object.
 
 ```dart
+import 'package:flutter/material.dart';
 import 'package:more_than_wrap/more_than_wrap.dart';
 
 LimitedWrapWidget(
-  maxLines: 2, // Maximum 2 rows
-  spacing: 8.0, // Spacing between elements
-  runSpacing: 4.0, // Spacing between rows
-  children: [
+  maxLines: 2,
+  spacing: 8,
+  runSpacing: 4,
+  overflowBuilderStyle: OverflowBuilderStyle(
+    textBuilder: (count) => '+$count',
+    textStyle: const TextStyle(color: Colors.white),
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    radius: const Radius.circular(12),
+    color: Colors.blue,
+    // Optional: tap handling for the painted indicator
+    onTap: () {
+      // Handle tap on the overflow indicator
+    },
+  ),
+  children: const [
     Chip(label: Text('Tag 1')),
     Chip(label: Text('Tag 2')),
     Chip(label: Text('Tag 3')),
-    // ... more widgets
+    // ...
   ],
 )
 ```
 
-### With Overflow Widget
+When overflow occurs, the indicator will be painted at the end of the last visible row. The `textBuilder` receives the number of overflowed children.
+
+### Option B: Builder API (custom widget via `LimitedWrapWidget.builder`)
+
+Use `LimitedWrapWidget.builder` to supply your own overflow widget (e.g., a `Chip`). In this mode, the overflow indicator is added as a real child at the end.
 
 ```dart
-LimitedWrapWidget(
+import 'package:flutter/material.dart';
+import 'package:more_than_wrap/more_than_wrap.dart';
+
+LimitedWrapWidget.builder(
   maxLines: 2,
-  spacing: 8.0,
-  runSpacing: 4.0,
-  overflowWidgetBuilder: (overflowCount) {
+  spacing: 8,
+  runSpacing: 4,
+  overflowWidgetBuilder: (count) {
+    if (count == null || count == 0) return const SizedBox.shrink();
     return Chip(
-      label: Text('+$overflowCount more'),
-      backgroundColor: Colors.grey[300],
+      label: Text('+$count more'),
+      backgroundColor: Colors.grey.shade300,
     );
   },
-  children: [
+  children: const [
     Chip(label: Text('Tag 1')),
     Chip(label: Text('Tag 2')),
-    // ... more widgets
+    Chip(label: Text('Tag 3')),
+    // ...
   ],
 )
 ```
 
-### Advanced Usage with Callback
+## Stability and known issues
 
-```dart
-LimitedWrapWidget(
-  maxLines: 3,
-  spacing: 12.0,
-  runSpacing: 8.0,
-  overflowWidgetBuilder: (overflowCount) {
-    if (overflowCount == null) return SizedBox.shrink();
-    return GestureDetector(
-      onTap: () {
-        // Handle overflow tap
-        print('$overflowCount items overflowed');
-      },
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.blue,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Text(
-          '+$overflowCount',
-          style: TextStyle(color: Colors.white),
-        ),
-      ),
-    );
-  },
-  children: yourWidgetList,
-)
-```
+- The current implementation of `LimitedWrapWidget.builder` is **unstable** and may cause visible UI jank (e.g., slight layout shifts during measurement/paint) in some scenarios.
+- This applies to both strategies (Styler and Builder), but may be more noticeable when the overflow state changes frequently.
 
-## Additional information
+We recommend testing your target screens carefully and avoiding heavy rebuilds of the overflow indicator where possible or just use plain `LimitedWrapWidget` with no worries.
 
-This package is useful for:
-- Tag clouds with limited height
-- Chip lists that need to fit in constrained spaces
-- Any layout where you want to show a limited number of rows with overflow indication
+## Roadmap
 
-### Key Components
+- A future, more stable variant of `LimitedWrapWidget` is planned as soon as possible. It will:
+  - Provide a more robust layout mechanism that minimizes jank
+  - Offer a convenient `Widget` API with a `builder`-like property while keeping the flexibility of the current design
 
-- `LimitedWrapWidget`: The main widget that provides the limited wrap functionality
-- `OnWidgetsLayouted`: Callback function type for overflow notifications
-- Custom render objects for efficient layout calculations
+If you have specific stability requirements or API suggestions, please open an issue.
 
 ### Contributing
 
@@ -130,4 +128,4 @@ Feel free to contribute to this package by:
 
 ### License
 
-This package is licensed under the MIT License.
+This package is licensed under the BSD 3-Clause License. See the OSI page: [BSD-3-Clause](https://opensource.org/licenses/BSD-3-Clause).
