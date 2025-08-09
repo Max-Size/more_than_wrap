@@ -106,10 +106,10 @@ LimitedWrapWidget.builder(
 
 ## Stability and known issues
 
-- The current implementation is **unstable** and may cause visible UI jank (e.g., slight layout shifts during measurement/paint) in some scenarios.
+- The current implementation of `LimitedWrapWidget.builder` is **unstable** and may cause visible UI jank (e.g., slight layout shifts during measurement/paint) in some scenarios.
 - This applies to both strategies (Styler and Builder), but may be more noticeable when the overflow state changes frequently.
 
-We recommend testing your target screens carefully and avoiding heavy rebuilds of the overflow indicator where possible.
+We recommend testing your target screens carefully and avoiding heavy rebuilds of the overflow indicator where possible or just use plain `LimitedWrapWidget` with no worries.
 
 ## Roadmap
 
