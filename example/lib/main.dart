@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:more_than_wrap/more_than_wrap.dart';
 
@@ -18,7 +16,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         useMaterial3: true,
       ),
-      home: SliderControlWidget(),
+      home: const SliderControlWidget(),
     );
   }
 }
@@ -33,15 +31,15 @@ class SliderControlWidget extends StatefulWidget {
 class _SliderControlWidgetState extends State<SliderControlWidget> {
   // Variables controlled by sliders
   int maxLines = 2;
-  double itemWidth = 150.0;
-  int itemCount = 10;
-  bool useBuilder = false;
+  double itemWidth = 57.0;
+  int itemCount = 13;
+  bool useBuilder = true;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Slider Control Example'),
+        title: const Text('Slider Control Example'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       body: Padding(
@@ -59,7 +57,7 @@ class _SliderControlWidgetState extends State<SliderControlWidget> {
                   children: [
                     // Switch to toggle between implementations
                     SwitchListTile(
-                      title: Text('Use LimitedWrapWidget.builder'),
+                      title: const Text('Use LimitedWrapWidget.builder'),
                       value: useBuilder,
                       onChanged: (value) {
                         setState(() {
@@ -116,14 +114,14 @@ class _SliderControlWidgetState extends State<SliderControlWidget> {
               ),
             ),
 
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
 
             // Visual demonstration area
             Text(
               'Visual Result:',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
 
             Expanded(
               child: Container(
@@ -135,54 +133,11 @@ class _SliderControlWidgetState extends State<SliderControlWidget> {
                 child: Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: Center(
-                    child: SizedBox(
-                      width: 200,
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          log('constraints: $constraints');
-                          if (useBuilder) {
-                            return LimitedWrapWidget.builder(
-                              spacing: 0,
-                              runSpacing: 0,
-                              maxLines: maxLines.toInt(),
-                              overflowWidgetBuilder: (count) => Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                child: Text(
-                                  '+${count ?? 0} more',
-                                  style: const TextStyle(fontSize: 14, color: Colors.red),
-                                ),
-                              ),
-                              children: List.generate(
-                                itemCount,
-                                (i) => sizedChild(
-                                  'Item $i',
-                                  key: ValueKey('item_$i'),
-                                  width: itemWidth,
-                                ),
-                              ),
-                            );
-                          } else {
-                            return LimitedWrapWidget(
-                              spacing: 0,
-                              runSpacing: 0,
-                              maxLines: maxLines.toInt(),
-                              overflowBuilderStyle: OverflowBuilderStyle(
-                                textBuilder: (count) => '+$count more',
-                                textStyle: const TextStyle(fontSize: 14, color: Colors.red),
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              ),
-                              children: List.generate(
-                                itemCount,
-                                (i) => sizedChild(
-                                  'Item $i',
-                                  key: ValueKey('item_$i'),
-                                  width: itemWidth,
-                                ),
-                              ),
-                            );
-                          }
-                        },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 40.0,
                       ),
+                      child: limitedWrapWidget,
                     ),
                   ),
                 ),
@@ -194,12 +149,61 @@ class _SliderControlWidgetState extends State<SliderControlWidget> {
     );
   }
 
+  Widget get limitedWrapWidget => switch (useBuilder) {
+        true => LimitedWrapWidget.builder(
+            spacing: 0,
+            runSpacing: 0,
+            maxLines: maxLines.toInt(),
+            overflowWidgetBuilder: (count) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Text(
+                '+${count ?? 0} more',
+                style: const TextStyle(fontSize: 14, color: Colors.red),
+              ),
+            ),
+            children: List.generate(
+              itemCount,
+              (i) => sizedChild(
+                'Item $i',
+                key: ValueKey('item_$i'),
+                width: itemWidth,
+              ),
+            ),
+          ),
+        false => LimitedWrapWidget(
+            spacing: 0,
+            runSpacing: 0,
+            maxLines: maxLines.toInt(),
+            overflowBuilderStyle: OverflowBuilderStyle(
+              textBuilder: (count) => '+$count more',
+              textStyle: const TextStyle(fontSize: 14, color: Colors.red),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            ),
+            children: List.generate(
+              itemCount,
+              (i) => sizedChild(
+                'Item $i',
+                key: ValueKey('item_$i'),
+                width: itemWidth,
+              ),
+            ),
+          ),
+      };
+
   Widget sizedChild(String text,
       {Key? key, double width = 60, double height = 30}) {
-    return SizedBox(
-      width: width,
-      height: height,
-      child: Text(text, key: key),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: Colors.grey),
+      ),
+      child: SizedBox(
+        width: width,
+        height: height,
+        child: Center(
+          child: Text(text, key: key),
+        ),
+      ),
     );
   }
 
