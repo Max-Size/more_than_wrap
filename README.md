@@ -128,4 +128,4 @@ Feel free to contribute to this package by:
 
 ### License
 
-This package is licensed under the MIT License.
+This package is licensed under the BSD 3-Clause License. See the OSI page: [BSD-3-Clause](https://opensource.org/licenses/BSD-3-Clause).
