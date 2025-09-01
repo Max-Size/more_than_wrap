@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:more_than_wrap/more_than_wrap.dart';
 
@@ -33,7 +35,6 @@ class _SliderControlWidgetState extends State<SliderControlWidget> {
   int maxLines = 2;
   double itemWidth = 57.0;
   int itemCount = 13;
-  bool useBuilder = true;
 
   @override
   Widget build(BuildContext context) {
@@ -55,16 +56,6 @@ class _SliderControlWidgetState extends State<SliderControlWidget> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Switch to toggle between implementations
-                    SwitchListTile(
-                      title: const Text('Use LimitedWrapWidget.builder'),
-                      value: useBuilder,
-                      onChanged: (value) {
-                        setState(() {
-                          useBuilder = value;
-                        });
-                      },
-                    ),
                     // MaxLines Slider
                     Text('Max Lines: ${maxLines.round()}'),
                     Slider(
@@ -149,46 +140,35 @@ class _SliderControlWidgetState extends State<SliderControlWidget> {
     );
   }
 
-  Widget get limitedWrapWidget => switch (useBuilder) {
-        true => LimitedWrapWidget.builder(
-            spacing: 0,
-            runSpacing: 0,
-            maxLines: maxLines.toInt(),
-            overflowWidgetBuilder: (count) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              child: Text(
-                '+${count ?? 0} more',
-                style: const TextStyle(fontSize: 14, color: Colors.red),
-              ),
-            ),
-            children: List.generate(
-              itemCount,
-              (i) => sizedChild(
-                'Item $i',
-                key: ValueKey('item_$i'),
-                width: itemWidth,
-              ),
-            ),
-          ),
-        false => LimitedWrapWidget(
-            spacing: 0,
-            runSpacing: 0,
-            maxLines: maxLines.toInt(),
-            overflowBuilderStyle: OverflowBuilderStyle(
+  Widget get limitedWrapWidget => LimitedWrapWidget(
+        spacing: 0,
+        runSpacing: 0,
+        maxLines: maxLines.toInt(),
+        overflowBuilder: OverflowBuilder(
+          onTap: () => log('hello from limited wrap widget'),
+          items: [
+            OverflowBuilderItem.text(
               textBuilder: (count) => '+$count more',
               textStyle: const TextStyle(fontSize: 14, color: Colors.red),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             ),
-            children: List.generate(
-              itemCount,
-              (i) => sizedChild(
-                'Item $i',
-                key: ValueKey('item_$i'),
-                width: itemWidth,
-              ),
+            OverflowBuilderItem.widget(
+              child: Icon(Icons.chevron_right),
             ),
+          ],
+          style: OverflowBuilderStyle(
+              border: Border.all(color: Colors.blue),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+              color: Colors.amber.withAlpha(0)),
+        ),
+        children: List.generate(
+          itemCount,
+          (i) => sizedChild(
+            'Item $i',
+            key: ValueKey('item_$i'),
+            width: itemWidth,
           ),
-      };
+        ),
+      );
 
   Widget sizedChild(String text,
       {Key? key, double width = 60, double height = 30}) {

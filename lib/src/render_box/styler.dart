@@ -1,8 +1,9 @@
+import 'dart:math';
 import 'dart:ui';
 
 import 'package:flutter/rendering.dart';
-import 'package:flutter/widgets.dart';
-import 'package:more_than_wrap/src/overflow_style.dart';
+import 'package:more_than_wrap/src/overflow/builder.dart';
+import 'package:more_than_wrap/src/overflow/item.dart';
 import 'package:more_than_wrap/src/render_box/render_box.dart';
 
 class _DrawResult {
@@ -13,40 +14,38 @@ class _DrawResult {
 }
 
 class ExtendedRenderWrapWidgetStyler extends ExtendedRenderWrap<String> {
-  OverflowBuilderStyle? _overflowBuilderStyle;
+  OverflowBuilder? _overflowBuilder;
   _DrawResult? _overflowIndicator;
   Rect? _gestureTarget;
 
   ExtendedRenderWrapWidgetStyler({
-    required OverflowBuilderStyle? overflowBuilderStyle,
+    required OverflowBuilder? overflowBuilderStyle,
     required super.runSpacing,
     required super.spacing,
     super.children,
     super.onWidgetsLayouted,
     super.maxLines,
-  }) : _overflowBuilderStyle = overflowBuilderStyle,
+    required super.amountOfActualWrapChildren,
+  }) : _overflowBuilder = overflowBuilderStyle,
        super(isOverflowWidgetAdded: false);
 
-  set overflowBuilderStyle(OverflowBuilderStyle? overflowBuilderStyle) {
-    _overflowBuilderStyle = overflowBuilderStyle;
+  set overflowBuilderStyle(OverflowBuilder? overflowBuilderStyle) {
+    _overflowBuilder = overflowBuilderStyle;
     markNeedsLayout();
   }
 
   _DrawResult _drawOverflowIndicator(
     int objectsOverflowed,
-    OverflowBuilderStyle overflowBuilder,
+    OverflowBuilder overflowBuilder,
   ) {
     final recorder = PictureRecorder();
     final canvas = Canvas(recorder);
-    final overflowText = overflowBuilder.textBuilder(objectsOverflowed);
-    final paddingHorizontal = overflowBuilder.padding.horizontal;
-    final overflowTextPainter = TextPainter(textDirection: TextDirection.ltr)
-      ..text = TextSpan(text: overflowText, style: overflowBuilder.textStyle)
-      ..layout(maxWidth: constraints.maxWidth - paddingHorizontal);
-    final textSize = overflowTextPainter.size;
-    final overflowWidth = textSize.width + paddingHorizontal;
-    final overflowHeight = textSize.height + overflowBuilder.padding.vertical;
-    final radius = overflowBuilder.radius ?? Radius.zero;
+    final paddingHorizontal = overflowBuilder.style.padding.horizontal;
+    final childrenSize = _layoutOverflowChildren(canvas);
+    final overflowWidth = childrenSize.width + paddingHorizontal;
+    final overflowHeight =
+        childrenSize.height + overflowBuilder.style.padding.vertical;
+    final radius = overflowBuilder.style.radius ?? Radius.zero;
     final overflowRect = RRect.fromLTRBR(
       0,
       0,
@@ -58,9 +57,10 @@ class ExtendedRenderWrapWidgetStyler extends ExtendedRenderWrap<String> {
       overflowRect,
       Paint()
         ..color =
-            overflowBuilder.color ?? const Color.fromARGB(255, 145, 128, 128),
+            overflowBuilder.style.color ??
+            const Color.fromARGB(255, 145, 128, 128),
     );
-    final border = overflowBuilder.border;
+    final border = overflowBuilder.style.border;
     if (border != null) {
       border.paint(
         canvas,
@@ -69,13 +69,59 @@ class ExtendedRenderWrapWidgetStyler extends ExtendedRenderWrap<String> {
         borderRadius: BorderRadius.all(radius),
       );
     }
-    overflowTextPainter.paint(
-      canvas,
-      Offset(overflowBuilder.padding.left, overflowBuilder.padding.top),
-    );
+
     final size = Size(overflowWidth, overflowHeight);
     final picture = recorder.endRecording();
+
     return _DrawResult(picture: picture, size: size);
+  }
+
+  Size _layoutOverflowChildren(Canvas canvas) {
+    final items = _overflowBuilder?.items;
+    if (items == null) return Size.zero;
+    var offset = Offset.zero;
+    double maxHeight = 0;
+    for (final item in items) {
+      final childSize = _layoutChild(item, offset, canvas);
+      maxHeight = max(childSize.height, maxHeight);
+      offset += Offset(childSize.width, 0);
+    }
+    return Size(offset.dx, maxHeight);
+  }
+
+  Size _layoutChild(OverflowBuilderItem item, Offset offset, Canvas canvas) =>
+      switch (item) {
+        OverflowBuilderWidgetItem _ => _layoutWidget(item, offset),
+        OverflowBuilderTextItem _ => _layoutAndPaintText(item, offset, canvas),
+      };
+
+  Size _layoutAndPaintText(
+    OverflowBuilderTextItem textBuilder,
+    Offset offset,
+    Canvas canvas,
+  ) {
+    final overflowText = textBuilder.textBuilder(objectsOverflowed);
+    final overflowTextPainter =
+        TextPainter(textDirection: TextDirection.ltr)
+          ..text = TextSpan(text: overflowText, style: textBuilder.textStyle)
+          ..layout(
+            maxWidth:
+                constraints.maxWidth -
+                (_overflowBuilder?.style.padding.horizontal ?? 0),
+          );
+    final textSize = overflowTextPainter.size;
+    overflowTextPainter.paint(canvas, offset);
+    return textSize;
+  }
+
+  Size _layoutWidget(OverflowBuilderWidgetItem widget, Offset offset) {
+    final parentData = lastRenderedChild?.parentData as LimitWrapParentData;
+    final curRenderBox = parentData.nextSibling;
+    curRenderBox!.layout(constraints, parentUsesSize: true);
+    final curParentData = curRenderBox.parentData as LimitWrapParentData;
+    curParentData.offset = Offset(dx, dy) + offset;
+    lastRenderedChild = curRenderBox;
+    return curRenderBox.size;
   }
 
   @override
@@ -83,7 +129,7 @@ class ExtendedRenderWrapWidgetStyler extends ExtendedRenderWrap<String> {
     if (!hasOverflow) {
       _overflowIndicator = null;
     }
-    final overflowBuilder = _overflowBuilderStyle;
+    final overflowBuilder = _overflowBuilder;
     if (!hasOverflow || overflowBuilder == null) {
       return;
     }
@@ -119,13 +165,14 @@ class ExtendedRenderWrapWidgetStyler extends ExtendedRenderWrap<String> {
     final boundary = _gestureTarget;
     if (boundary == null) return;
     if (boundary.contains(position)) {
-      _overflowBuilderStyle?.onTap?.call();
+      _overflowBuilder?.onTap?.call();
     }
   }
 
   @override
   void paint(PaintingContext context, Offset offset) {
     super.paint(context, offset);
+
     final picture = _overflowIndicator?.picture;
     final size = _overflowIndicator?.size;
     if (picture != null) {

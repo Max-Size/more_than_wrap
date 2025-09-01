@@ -20,10 +20,14 @@ abstract class ExtendedRenderWrap<T> extends RenderBox
     T Function(int)? onWidgetsLayouted,
     int? maxLines,
     required this.isOverflowWidgetAdded,
-  }) : onWidgetsLayoutedInternal = onWidgetsLayouted,
+    required int amountOfActualWrapChildren,
+  }) : _amountOfActualWrapChildren = amountOfActualWrapChildren,
+       onWidgetsLayoutedInternal = onWidgetsLayouted,
        _maxLines = maxLines {
     addAll(children);
   }
+
+  int _amountOfActualWrapChildren;
 
   /// Flag - whether the number of overflowed elements has been calculated
   bool calculatedOverflow = false;
@@ -57,6 +61,10 @@ abstract class ExtendedRenderWrap<T> extends RenderBox
   /// needs to be displayed on overflow
   ///
   final bool isOverflowWidgetAdded;
+
+  set amountOfActualWrapChildren(int amount) {
+    _amountOfActualWrapChildren = amount;
+  }
 
   /// Setter for maximum number of rows
   ///
@@ -174,6 +182,7 @@ abstract class ExtendedRenderWrap<T> extends RenderBox
 
     /// Loop to iterate through all child elements and draw them
     while (child != null && curIndex < allElements) {
+      if (curIndex > _amountOfActualWrapChildren ) return;
       /// If already overflowed, then skip child element
       if (hasOverflow) {
         passChild();
