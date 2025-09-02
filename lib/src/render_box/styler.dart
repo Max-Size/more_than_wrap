@@ -41,7 +41,7 @@ class ExtendedRenderWrapWidgetStyler extends ExtendedRenderWrap<String> {
     final recorder = PictureRecorder();
     final canvas = Canvas(recorder);
     final paddingHorizontal = overflowBuilder.style.padding.horizontal;
-    final childrenSize = _layoutOverflowChildren(canvas);
+    final childrenSize = _layoutOverflowChildren(canvas, objectsOverflowed);
     final overflowWidth = childrenSize.width + paddingHorizontal;
     final overflowHeight =
         childrenSize.height + overflowBuilder.style.padding.vertical;
@@ -76,54 +76,6 @@ class ExtendedRenderWrapWidgetStyler extends ExtendedRenderWrap<String> {
     return _DrawResult(picture: picture, size: size);
   }
 
-  Size _layoutOverflowChildren(Canvas canvas) {
-    final items = _overflowBuilder?.items;
-    if (items == null) return Size.zero;
-    var offset = Offset.zero;
-    double maxHeight = 0;
-    for (final item in items) {
-      final childSize = _layoutChild(item, offset, canvas);
-      maxHeight = max(childSize.height, maxHeight);
-      offset += Offset(childSize.width, 0);
-    }
-    return Size(offset.dx, maxHeight);
-  }
-
-  Size _layoutChild(OverflowBuilderItem item, Offset offset, Canvas canvas) =>
-      switch (item) {
-        OverflowBuilderWidgetItem _ => _layoutWidget(item, offset),
-        OverflowBuilderTextItem _ => _layoutAndPaintText(item, offset, canvas),
-      };
-
-  Size _layoutAndPaintText(
-    OverflowBuilderTextItem textBuilder,
-    Offset offset,
-    Canvas canvas,
-  ) {
-    final overflowText = textBuilder.textBuilder(objectsOverflowed);
-    final overflowTextPainter =
-        TextPainter(textDirection: TextDirection.ltr)
-          ..text = TextSpan(text: overflowText, style: textBuilder.textStyle)
-          ..layout(
-            maxWidth:
-                constraints.maxWidth -
-                (_overflowBuilder?.style.padding.horizontal ?? 0),
-          );
-    final textSize = overflowTextPainter.size;
-    overflowTextPainter.paint(canvas, offset);
-    return textSize;
-  }
-
-  Size _layoutWidget(OverflowBuilderWidgetItem widget, Offset offset) {
-    final parentData = lastRenderedChild?.parentData as LimitWrapParentData;
-    final curRenderBox = parentData.nextSibling;
-    curRenderBox!.layout(constraints, parentUsesSize: true);
-    final curParentData = curRenderBox.parentData as LimitWrapParentData;
-    curParentData.offset = Offset(dx, dy) + offset;
-    lastRenderedChild = curRenderBox;
-    return curRenderBox.size;
-  }
-
   @override
   void layoutOverflowIndicator(bool hasOverflow) {
     if (!hasOverflow) {
@@ -145,14 +97,66 @@ class ExtendedRenderWrapWidgetStyler extends ExtendedRenderWrap<String> {
         ExtendedRenderWrap.shrinkedConstraints,
         parentUsesSize: true,
       );
+      final newObjectsOverflowAmount = objectsOverflowed + 1;
       final drawResult = _drawOverflowIndicator(
-        objectsOverflowed + 1,
+        newObjectsOverflowAmount,
         overflowBuilder,
       );
       _overflowIndicator = drawResult;
     }
     // picture.
   }
+
+  Size _layoutOverflowChildren(Canvas canvas, int objectsOverflowed) {
+    RenderBox? lastChild = lastLayoutedChild;
+
+    Size layoutAndPaintText(
+      OverflowBuilderTextItem textBuilder,
+      Offset offset,
+      Canvas canvas,
+    ) {
+      final overflowText = textBuilder.textBuilder(objectsOverflowed);
+      final overflowTextPainter =
+          TextPainter(textDirection: TextDirection.ltr)
+            ..text = TextSpan(text: overflowText, style: textBuilder.textStyle)
+            ..layout(
+              maxWidth:
+                  constraints.maxWidth -
+                  (_overflowBuilder?.style.padding.horizontal ?? 0),
+            );
+      final textSize = overflowTextPainter.size;
+      overflowTextPainter.paint(canvas, offset);
+      return textSize;
+    }
+
+    Size layoutWidget(OverflowBuilderWidgetItem widget, Offset offset) {
+      final parentData = lastChild?.parentData as LimitWrapParentData;
+      final curRenderBox = parentData.nextSibling;
+      curRenderBox!.layout(constraints, parentUsesSize: true);
+      final curParentData = curRenderBox.parentData as LimitWrapParentData;
+      curParentData.offset = Offset(dx, dy) + offset;
+      lastChild = curRenderBox;
+      return curRenderBox.size;
+    }
+
+    Size layoutChild(OverflowBuilderItem item, Offset offset, Canvas canvas) =>
+        switch (item) {
+          OverflowBuilderWidgetItem _ => layoutWidget(item, offset),
+          OverflowBuilderTextItem _ => layoutAndPaintText(item, offset, canvas),
+        };
+
+    final items = _overflowBuilder?.items;
+    if (items == null) return Size.zero;
+    var offset = Offset.zero;
+    double maxHeight = 0;
+    for (final item in items) {
+      final childSize = layoutChild(item, offset, canvas);
+      maxHeight = max(childSize.height, maxHeight);
+      offset += Offset(childSize.width, 0);
+    }
+    return Size(offset.dx, maxHeight);
+  }
+
 
   @override
   bool hitTestSelf(Offset position) => true;

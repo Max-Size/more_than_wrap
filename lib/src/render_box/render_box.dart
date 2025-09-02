@@ -96,6 +96,8 @@ abstract class ExtendedRenderWrap<T> extends RenderBox
   ///
   void onUpdate() {
     isHideLastItemIfOverflowed = false;
+    markNeedsLayout();
+
     // calculatedOverflow = false;
   }
 
@@ -124,6 +126,8 @@ abstract class ExtendedRenderWrap<T> extends RenderBox
 
   /// Last rendered child element
   RenderBox? lastRenderedChild;
+
+  RenderBox? lastLayoutedChild;
 
   @override
   BoxConstraints get constraints =>
@@ -182,7 +186,9 @@ abstract class ExtendedRenderWrap<T> extends RenderBox
 
     /// Loop to iterate through all child elements and draw them
     while (child != null && curIndex < allElements) {
-      if (curIndex > _amountOfActualWrapChildren ) return;
+      if (curIndex > _amountOfActualWrapChildren - 1) break;
+      lastLayoutedChild = child;
+
       /// If already overflowed, then skip child element
       if (hasOverflow) {
         passChild();
@@ -238,66 +244,6 @@ abstract class ExtendedRenderWrap<T> extends RenderBox
       /// Look at next child
       child = childParentData.nextSibling;
     }
-
-    /// Then the following happens:
-    ///
-    ///             Was overflow widget added for display
-    ///                 in case of overflow?
-    ///                           |
-    ///                           |Yes
-    ///                           |
-    ///                 Is there overflow?
-    ///                        /        \
-    ///                 No   /          \ Yes
-    ///                      /            \_____ _______
-    ///                     /                   |           Do we need to hide the last rendered element?
-    ///                    /                    |                        /           \
-    ///   Then simply don't draw          |                 No   /             \ Yes
-    ///       overflow widget                   |                      /               \
-    ///                                         |               nothing to           1. Reduce offset for next element
-    ///                                         |                do                on width of last child element and [spacing]
-    ///                                         |                                   2. Hide last element with zero constraints
-    ///                                         |
-    ///                                         |
-    ///                                         |________
-    ///                                         |              Is overflow calculated yet?
-    ///                                         |                      /           \
-    ///                                         |            Calculated /             \ Not calculated
-    ///                                         |                    /               \
-    ///                                         |               nothing to          Schedule microtask (Important: we can't start
-    ///                                         |                do                                rebuilding when not fully built [ExtendedRenderWrap]):
-    ///                                         |                                      1. Raise flag [calculatedOverflow]
-    ///                                         |                                      2. Call [_onWidgetsLayouted]
-    ///                                         |                                         passing there number of overflowed elements without considering overflow widget
-    ///                                         |                                      2. Reset number of overflowed elements
-    ///                                         |
-    ///                                         |
-    ///                                         |
-    ///                                         |
-    ///                              Draw overflow widget
-    ///                                         |
-    ///                                         |
-    ///                                         |
-    ///                                         |_____________
-    ///                                         |                 Is overflow widget removed (OR) only widget for searching hash tags not removed?
-    ///                                         |                     (this check only happens when flag
-    ///                                         |                    that count of not removed elements [calculatedOverflow] is raised)
-    ///                                         |                                      /           \
-    ///                                         |                               No   /             \
-    ///                                         |                                    /               \
-    ///                                         |                                nothing to         1. Raise flag [isHideLastItemIfOverflowed] so that
-    ///                                         |                                                     not draw last element
-    ///                                         |                                 do           2. Increase number of not removed elements by 1
-    ///                                         |                                                  3. Schedule microtask:
-    ///                                         |                                                     - 1. Call [_onWidgetsLayouted] passing
-    ///                                         |                                                         there number of overflowed elements without considering overflow widget
-    ///                                         |                                                     - 2. Reset number of overflowed elements
-    ///                                         |
-    ///                                         |
-    ///                                         |
-    ///                                         |
-    ///                  Mark constraints for all parent [RenderBox]
-    ///
 
     layoutOverflowIndicator(hasOverflow);
 

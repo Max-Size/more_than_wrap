@@ -157,7 +157,7 @@ class _SliderControlWidgetState extends State<SliderControlWidget> {
           ],
           style: OverflowBuilderStyle(
               border: Border.all(color: Colors.blue),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+              // padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
               color: Colors.amber.withAlpha(0)),
         ),
         children: List.generate(
@@ -184,14 +184,6 @@ class _SliderControlWidgetState extends State<SliderControlWidget> {
           child: Text(text, key: key),
         ),
       ),
-    );
-  }
-
-  SliverChildDelegate getSliverChildDelegate() {
-    return SliverChildBuilderDelegate(
-      (context, index) =>
-          sizedChild('Item $index', key: ValueKey('item_$index')),
-      childCount: 10,
     );
   }
 }
