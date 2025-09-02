@@ -83,6 +83,7 @@ class ExtendedRenderWrapWidgetStyler extends ExtendedRenderWrap<String> {
     }
     final overflowBuilder = _overflowBuilder;
     if (!hasOverflow || overflowBuilder == null) {
+      _passAllOverflowWidgets();
       return;
     }
     final drawResult = _drawOverflowIndicator(
@@ -105,6 +106,19 @@ class ExtendedRenderWrapWidgetStyler extends ExtendedRenderWrap<String> {
       _overflowIndicator = drawResult;
     }
     // picture.
+  }
+
+  void _passAllOverflowWidgets() {
+    RenderBox? curRenderBox = lastRenderedChild;
+    curRenderBox =
+        (curRenderBox?.parentData as LimitWrapParentData?)?.nextSibling;
+    while (curRenderBox != null) {
+      curRenderBox.layout(
+        ExtendedRenderWrap.shrinkedConstraints,
+      );
+      curRenderBox =
+          (curRenderBox.parentData as LimitWrapParentData?)?.nextSibling;
+    }
   }
 
   Size _layoutOverflowChildren(Canvas canvas, int objectsOverflowed) {
@@ -156,7 +170,6 @@ class ExtendedRenderWrapWidgetStyler extends ExtendedRenderWrap<String> {
     }
     return Size(offset.dx, maxHeight);
   }
-
 
   @override
   bool hitTestSelf(Offset position) => true;

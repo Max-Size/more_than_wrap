@@ -97,6 +97,7 @@ abstract class ExtendedRenderWrap<T> extends RenderBox
   void onUpdate() {
     isHideLastItemIfOverflowed = false;
     markNeedsLayout();
+    hasOverflow = false;
 
     // calculatedOverflow = false;
   }
@@ -132,6 +133,9 @@ abstract class ExtendedRenderWrap<T> extends RenderBox
   @override
   BoxConstraints get constraints =>
       super.constraints.copyWith(minWidth: 0, minHeight: 0);
+
+  /// Flag showing that elements are overflowed
+  bool hasOverflow = false;
 
   /// Main function containing all the logic for building elements
   ///
@@ -170,9 +174,6 @@ abstract class ExtendedRenderWrap<T> extends RenderBox
 
     /// Index of current element
     int curIndex = 0;
-
-    /// Flag showing that elements are overflowed
-    bool hasOverflow = false;
 
     /// Function to skip drawing child element
     void passChild() {
@@ -263,11 +264,14 @@ abstract class ExtendedRenderWrap<T> extends RenderBox
   @override
   void paint(PaintingContext context, Offset offset) {
     RenderBox? child = firstChild;
+    int index = 0;
     while (child != null) {
+      if (!hasOverflow && index > _amountOfActualWrapChildren - 1) break;
       final LimitWrapParentData childParentData =
           child.parentData! as LimitWrapParentData;
       context.paintChild(child, childParentData.offset + offset);
       child = childParentData.nextSibling;
+      index++;
     }
   }
 }

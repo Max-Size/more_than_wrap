@@ -141,34 +141,39 @@ class _SliderControlWidgetState extends State<SliderControlWidget> {
   }
 
   Widget get limitedWrapWidget => LimitedWrapWidget(
-        spacing: 0,
-        runSpacing: 0,
-        maxLines: maxLines.toInt(),
-        overflowBuilder: OverflowBuilder(
-          onTap: () => log('hello from limited wrap widget'),
-          items: [
-            OverflowBuilderItem.text(
-              textBuilder: (count) => '+$count more',
-              textStyle: const TextStyle(fontSize: 14, color: Colors.red),
-            ),
-            OverflowBuilderItem.widget(
-              child: Icon(Icons.chevron_right),
-            ),
-          ],
-          style: OverflowBuilderStyle(
-              border: Border.all(color: Colors.blue),
-              // padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-              color: Colors.amber.withAlpha(0)),
-        ),
-        children: List.generate(
-          itemCount,
-          (i) => sizedChild(
-            'Item $i',
-            key: ValueKey('item_$i'),
-            width: itemWidth,
+      spacing: 0,
+      runSpacing: 0,
+      maxLines: maxLines.toInt(),
+      overflowBuilder: OverflowBuilder(
+        onTap: () => log('hello from limited wrap widget'),
+        items: [
+          OverflowBuilderItem.text(
+            textBuilder: (count) => '+$count more',
+            textStyle: const TextStyle(fontSize: 14, color: Colors.red),
           ),
+          OverflowBuilderItem.widget(
+            child: ColoredBox(
+              color: Colors.yellow,
+              child: Text('>'),
+            ),
+          ),
+          OverflowBuilderItem.widget(
+            child: Icon(Icons.chevron_right),
+          ),
+        ],
+        style: OverflowBuilderStyle(
+            border: Border.all(color: Colors.blue),
+            // padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            color: Colors.amber.withAlpha(0)),
+      ),
+      children: List.generate(
+        itemCount,
+        (i) => sizedChild(
+          'Item $i',
+          key: ValueKey('item_$i'),
+          width: itemWidth,
         ),
-      );
+      ));
 
   Widget sizedChild(String text,
       {Key? key, double width = 60, double height = 30}) {
