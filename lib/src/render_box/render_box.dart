@@ -98,7 +98,7 @@ abstract class ExtendedRenderWrap<T> extends RenderBox
     isHideLastItemIfOverflowed = false;
     markNeedsLayout();
     hasOverflow = false;
-
+    visibleRenderBoxes.clear();
     // calculatedOverflow = false;
   }
 
@@ -129,6 +129,8 @@ abstract class ExtendedRenderWrap<T> extends RenderBox
   RenderBox? lastRenderedChild;
 
   RenderBox? lastLayoutedChild;
+
+  List<RenderBox?> visibleRenderBoxes = [];
 
   @override
   BoxConstraints get constraints =>
@@ -198,6 +200,7 @@ abstract class ExtendedRenderWrap<T> extends RenderBox
 
       /// Layout child element and get its dimensions
       child!.layout(constraints, parentUsesSize: true);
+      visibleRenderBoxes.add(child);
       final childSize = child!.size;
 
       /// If maximum number of rows constraint was passed,
@@ -246,13 +249,35 @@ abstract class ExtendedRenderWrap<T> extends RenderBox
       child = childParentData.nextSibling;
     }
 
-    layoutOverflowIndicator(hasOverflow);
+    final overflowIndicatorSize = layoutOverflowIndicator(hasOverflow);
+    final overflowIndicatorWidth = overflowIndicatorSize.width;
+    if (dx + overflowIndicatorWidth > constraints.maxWidth) {
+      final amountOfHidedElements = _hideRenderedBoxes(overflowIndicatorWidth);
+      objectsOverflowed += amountOfHidedElements;
+      layoutOverflowIndicator(hasOverflow);
+    }
 
     final height = max(dy + maxYPerRow, this.constraints.minHeight);
     size = constraints.constrain(Size(constraints.maxWidth, height));
   }
 
-  void layoutOverflowIndicator(bool hasOverflow);
+  int _hideRenderedBoxes(double overflowIndicatorWidth) {
+    int amount = 0;
+    for (final renderedBox in visibleRenderBoxes.reversed) {
+      if (renderedBox != null && renderedBox.size.width > 0) {
+        if (dx + overflowIndicatorWidth > constraints.maxWidth) {
+          amount++;
+          dx -= renderedBox.size.width + spacing;
+          renderedBox.layout(shrinkedConstraints, parentUsesSize: true);
+        } else {
+          break;
+        }
+      }
+    }
+    return amount;
+  }
+
+  Size layoutOverflowIndicator(bool hasOverflow);
 
   /// Add [RenderBox]'s ability to handle taps
   @override

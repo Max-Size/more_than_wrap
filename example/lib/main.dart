@@ -162,9 +162,10 @@ class _SliderControlWidgetState extends State<SliderControlWidget> {
           ),
         ],
         style: OverflowBuilderStyle(
-            border: Border.all(color: Colors.blue),
-            // padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-            color: Colors.amber.withAlpha(0)),
+          border: Border.all(color: Colors.blue),
+          padding: const EdgeInsets.only(right: 140),
+          color: Colors.amber.withAlpha(0),
+        ),
       ),
       children: List.generate(
         itemCount,

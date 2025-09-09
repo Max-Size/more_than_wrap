@@ -77,35 +77,35 @@ class ExtendedRenderWrapWidgetStyler extends ExtendedRenderWrap<String> {
   }
 
   @override
-  void layoutOverflowIndicator(bool hasOverflow) {
+  Size layoutOverflowIndicator(bool hasOverflow) {
     if (!hasOverflow) {
       _overflowIndicator = null;
     }
     final overflowBuilder = _overflowBuilder;
     if (!hasOverflow || overflowBuilder == null) {
       _passAllOverflowWidgets();
-      return;
+      return Size.zero;
     }
     final drawResult = _drawOverflowIndicator(
       objectsOverflowed,
       overflowBuilder,
     );
     _overflowIndicator = drawResult;
-    final overflowIndicatorWidth = drawResult.size.width;
-    if (dx + overflowIndicatorWidth > constraints.maxWidth) {
-      dx -= lastRenderedChild!.size.width + spacing;
-      lastRenderedChild?.layout(
-        ExtendedRenderWrap.shrinkedConstraints,
-        parentUsesSize: true,
-      );
-      final newObjectsOverflowAmount = objectsOverflowed + 1;
-      final drawResult = _drawOverflowIndicator(
-        newObjectsOverflowAmount,
-        overflowBuilder,
-      );
-      _overflowIndicator = drawResult;
-    }
-    // picture.
+    // final overflowIndicatorWidth = drawResult.size.width;
+    // if (dx + overflowIndicatorWidth > constraints.maxWidth) {
+    //   dx -= lastRenderedChild!.size.width + spacing;
+    //   lastRenderedChild?.layout(
+    //     ExtendedRenderWrap.shrinkedConstraints,
+    //     parentUsesSize: true,
+    //   );
+    //   final newObjectsOverflowAmount = objectsOverflowed + 1;
+    //   final drawResult = _drawOverflowIndicator(
+    //     newObjectsOverflowAmount,
+    //     overflowBuilder,
+    //   );
+    //   _overflowIndicator = drawResult;
+    // }
+    return drawResult.size;
   }
 
   void _passAllOverflowWidgets() {
@@ -113,9 +113,7 @@ class ExtendedRenderWrapWidgetStyler extends ExtendedRenderWrap<String> {
     curRenderBox =
         (curRenderBox?.parentData as LimitWrapParentData?)?.nextSibling;
     while (curRenderBox != null) {
-      curRenderBox.layout(
-        ExtendedRenderWrap.shrinkedConstraints,
-      );
+      curRenderBox.layout(ExtendedRenderWrap.shrinkedConstraints);
       curRenderBox =
           (curRenderBox.parentData as LimitWrapParentData?)?.nextSibling;
     }
@@ -135,8 +133,8 @@ class ExtendedRenderWrapWidgetStyler extends ExtendedRenderWrap<String> {
             ..text = TextSpan(text: overflowText, style: textBuilder.textStyle)
             ..layout(
               maxWidth:
-                  constraints.maxWidth -
-                  (_overflowBuilder?.style.padding.horizontal ?? 0),
+                  max(0, constraints.maxWidth -
+                  (_overflowBuilder?.style.padding.horizontal ?? 0)),
             );
       final textSize = overflowTextPainter.size;
       overflowTextPainter.paint(canvas, offset);
