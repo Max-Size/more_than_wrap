@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'dart:ui';
 
+import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:more_than_wrap/src/overflow/builder.dart';
 import 'package:more_than_wrap/src/overflow/item.dart';
@@ -91,20 +92,6 @@ class ExtendedRenderWrapWidgetStyler extends ExtendedRenderWrap<String> {
       overflowBuilder,
     );
     _overflowIndicator = drawResult;
-    // final overflowIndicatorWidth = drawResult.size.width;
-    // if (dx + overflowIndicatorWidth > constraints.maxWidth) {
-    //   dx -= lastRenderedChild!.size.width + spacing;
-    //   lastRenderedChild?.layout(
-    //     ExtendedRenderWrap.shrinkedConstraints,
-    //     parentUsesSize: true,
-    //   );
-    //   final newObjectsOverflowAmount = objectsOverflowed + 1;
-    //   final drawResult = _drawOverflowIndicator(
-    //     newObjectsOverflowAmount,
-    //     overflowBuilder,
-    //   );
-    //   _overflowIndicator = drawResult;
-    // }
     return drawResult.size;
   }
 
@@ -132,9 +119,11 @@ class ExtendedRenderWrapWidgetStyler extends ExtendedRenderWrap<String> {
           TextPainter(textDirection: TextDirection.ltr)
             ..text = TextSpan(text: overflowText, style: textBuilder.textStyle)
             ..layout(
-              maxWidth:
-                  max(0, constraints.maxWidth -
-                  (_overflowBuilder?.style.padding.horizontal ?? 0)),
+              maxWidth: max(
+                0,
+                constraints.maxWidth -
+                    (_overflowBuilder?.style.padding.horizontal ?? 0),
+              ),
             );
       final textSize = overflowTextPainter.size;
       overflowTextPainter.paint(canvas, offset);

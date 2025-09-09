@@ -160,10 +160,11 @@ class _SliderControlWidgetState extends State<SliderControlWidget> {
           OverflowBuilderItem.widget(
             child: Icon(Icons.chevron_right),
           ),
+          
         ],
         style: OverflowBuilderStyle(
           border: Border.all(color: Colors.blue),
-          padding: const EdgeInsets.only(right: 140),
+          padding: const EdgeInsets.only(right: 20),
           color: Colors.amber.withAlpha(0),
         ),
       ),

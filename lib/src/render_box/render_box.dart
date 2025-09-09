@@ -130,7 +130,7 @@ abstract class ExtendedRenderWrap<T> extends RenderBox
 
   RenderBox? lastLayoutedChild;
 
-  List<RenderBox?> visibleRenderBoxes = [];
+  var visibleRenderBoxes = <int, List<RenderBox?>>{};
 
   @override
   BoxConstraints get constraints =>
@@ -200,7 +200,6 @@ abstract class ExtendedRenderWrap<T> extends RenderBox
 
       /// Layout child element and get its dimensions
       child!.layout(constraints, parentUsesSize: true);
-      visibleRenderBoxes.add(child);
       final childSize = child!.size;
 
       /// If maximum number of rows constraint was passed,
@@ -227,6 +226,9 @@ abstract class ExtendedRenderWrap<T> extends RenderBox
         dy += maxYPerRow + runSpacing;
         maxYPerRow = 0;
       }
+
+      visibleRenderBoxes[renderedRows] ??= [];
+      visibleRenderBoxes[renderedRows]!.add(child);
 
       /// Set offset for current child element
       final LimitWrapParentData childParentData =
@@ -263,7 +265,8 @@ abstract class ExtendedRenderWrap<T> extends RenderBox
 
   int _hideRenderedBoxes(double overflowIndicatorWidth) {
     int amount = 0;
-    for (final renderedBox in visibleRenderBoxes.reversed) {
+    final lastRow = visibleRenderBoxes.keys.last;
+    for (final renderedBox in visibleRenderBoxes[lastRow]!.reversed) {
       if (renderedBox != null && renderedBox.size.width > 0) {
         if (dx + overflowIndicatorWidth > constraints.maxWidth) {
           amount++;
