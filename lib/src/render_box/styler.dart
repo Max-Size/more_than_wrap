@@ -1,7 +1,6 @@
 import 'dart:math';
 import 'dart:ui';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:more_than_wrap/src/overflow/builder.dart';
 import 'package:more_than_wrap/src/overflow/item.dart';
@@ -14,7 +13,8 @@ class _DrawResult {
   _DrawResult({required this.picture, required this.size});
 }
 
-class ExtendedRenderWrapWidgetStyler extends ExtendedRenderWrap<String> {
+class ExtendedRenderWrapWidgetStyler extends ExtendedRenderWrap<String>
+    with DebugOverflowIndicatorMixin {
   OverflowBuilder? _overflowBuilder;
   _DrawResult? _overflowIndicator;
   Rect? _gestureTarget;
@@ -175,23 +175,49 @@ class ExtendedRenderWrapWidgetStyler extends ExtendedRenderWrap<String> {
 
   @override
   void paint(PaintingContext context, Offset offset) {
-    super.paint(context, offset);
-
-    final picture = _overflowIndicator?.picture;
-    final size = _overflowIndicator?.size;
-    if (picture != null) {
-      final localDx = dx + offset.dx;
-      final localDy = dy + offset.dy;
-      _gestureTarget = Rect.fromLTRB(
-        localDx,
-        localDy,
-        localDx + (size?.width ?? 0),
-        localDy + (size?.height ?? 0),
+    if (hasOverflow) {
+      final picture = _overflowIndicator?.picture;
+      final overflowIndicatorsize = _overflowIndicator?.size;
+      context.canvas.clipRect(
+        Rect.fromLTRB(
+          0 + offset.dx,
+          0 + offset.dy,
+          constraints.maxWidth + offset.dx,
+          dy + (overflowIndicatorsize?.height ?? 0) + offset.dy,
+        ),
       );
-      context.canvas.save();
-      context.canvas.translate(localDx, localDy);
-      context.canvas.drawPicture(picture);
-      context.canvas.restore();
+
+      super.paint(context, offset);
+
+      if (picture != null) {
+        final localDx = dx + offset.dx;
+        final localDy = dy + offset.dy;
+        if (overflowIndicatorsize == null) return;
+        final wholeWidgetRect = Offset(localDx, localDy) & size;
+        final overflowIndicatorRect =
+            Offset(localDx, localDy) & overflowIndicatorsize;
+        if (overflowIndicatorsize.width > constraints.maxWidth) {
+          paintOverflowIndicator(
+            context,
+            offset,
+            wholeWidgetRect,
+            overflowIndicatorRect,
+          );
+        }
+
+        _gestureTarget = Rect.fromLTRB(
+          localDx,
+          localDy,
+          localDx + overflowIndicatorsize.width,
+          localDy + overflowIndicatorsize.height,
+        );
+        context.canvas.save();
+        context.canvas.translate(localDx, localDy);
+        context.canvas.drawPicture(picture);
+        context.canvas.restore();
+      }
+    } else {
+      super.paint(context, offset);
     }
   }
 }

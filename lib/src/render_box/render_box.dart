@@ -29,9 +29,6 @@ abstract class ExtendedRenderWrap<T> extends RenderBox
 
   int _amountOfActualWrapChildren;
 
-  /// Flag - whether the number of overflowed elements has been calculated
-  bool calculatedOverflow = false;
-
   /// Flag - whether to hide the last element that was able to fit
   ///
   /// In case of bugs, it will be necessary to replace with count
@@ -74,7 +71,6 @@ abstract class ExtendedRenderWrap<T> extends RenderBox
   set maxLines(int? value) {
     if (_maxLines == value) return;
     _maxLines = value;
-    // calculatedOverflow = false;
     markNeedsLayout();
   }
 
@@ -85,7 +81,6 @@ abstract class ExtendedRenderWrap<T> extends RenderBox
   ///
   set onWidgetsLayouted(void Function(int amountOfOverflowedWidgets)? fun) {
     onWidgetsLayoutedInternal = fun;
-    // calculatedOverflow = false;
     markNeedsLayout();
   }
 
@@ -99,7 +94,6 @@ abstract class ExtendedRenderWrap<T> extends RenderBox
     markNeedsLayout();
     hasOverflow = false;
     visibleRenderBoxes.clear();
-    // calculatedOverflow = false;
   }
 
   /// Set parentData for [RenderBox]
@@ -250,15 +244,19 @@ abstract class ExtendedRenderWrap<T> extends RenderBox
       /// Look at next child
       child = childParentData.nextSibling;
     }
+    if (hasOverflow) {
+      var overflowIndicatorSize = layoutOverflowIndicator(hasOverflow);
+      final overflowIndicatorWidth = overflowIndicatorSize.width;
+      if (dx + overflowIndicatorWidth > constraints.maxWidth) {
+        final amountOfHidedElements = _hideRenderedBoxes(
+          overflowIndicatorWidth,
+        );
+        objectsOverflowed += amountOfHidedElements;
+        overflowIndicatorSize = layoutOverflowIndicator(hasOverflow);
+      }
 
-    final overflowIndicatorSize = layoutOverflowIndicator(hasOverflow);
-    final overflowIndicatorWidth = overflowIndicatorSize.width;
-    if (dx + overflowIndicatorWidth > constraints.maxWidth) {
-      final amountOfHidedElements = _hideRenderedBoxes(overflowIndicatorWidth);
-      objectsOverflowed += amountOfHidedElements;
-      layoutOverflowIndicator(hasOverflow);
+      maxYPerRow = max(maxYPerRow, overflowIndicatorSize.height);
     }
-
     final height = max(dy + maxYPerRow, this.constraints.minHeight);
     size = constraints.constrain(Size(constraints.maxWidth, height));
   }
