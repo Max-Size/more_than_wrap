@@ -34,7 +34,7 @@ class _IntFieldControlWidgetState extends State<IntFieldControlWidget> {
   late final TextEditingController _itemWidthController;
   late final TextEditingController _itemCountController;
 
-  int maxLines = 2;
+  int? maxLines = 2;
   int itemWidth = 57;
   int itemCount = 13;
 
@@ -72,10 +72,43 @@ class _IntFieldControlWidgetState extends State<IntFieldControlWidget> {
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    _IntTextField(
-                      label: 'Max Lines',
-                      controller: _maxLinesController,
-                      onChanged: (value) => setState(() => maxLines = value),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _IntTextField(
+                            label: 'Max Lines',
+                            controller: _maxLinesController,
+                            enabled: maxLines != null,
+                            onChanged: (value) =>
+                                setState(() => maxLines = value),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Unlimited',
+                              style: Theme.of(context).textTheme.labelMedium,
+                            ),
+                            Switch(
+                              value: maxLines == null,
+                              onChanged: (unlimited) {
+                                setState(() {
+                                  if (unlimited) {
+                                    maxLines = null;
+                                  } else {
+                                    maxLines = int.tryParse(
+                                          _maxLinesController.text,
+                                        ) ??
+                                        2;
+                                  }
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 12),
                     _IntTextField(
@@ -106,36 +139,34 @@ class _IntFieldControlWidgetState extends State<IntFieldControlWidget> {
                   border: Border.all(color: Colors.grey),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 40),
-                      child: LimitedWrapWidget(
-                        spacing: 0,
-                        runSpacing: 0,
-                        maxLines: maxLines,
-                        overflowWidgetBuilder: (context, count) => Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          child: Text(
-                            '+$count more',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.red,
-                            ),
+                child: Center(
+                  child: LimitedWrapWidget(
+                    spacing: 0,
+                    runSpacing: 0,
+                    maxLines: maxLines,
+                    overflowWidgetBuilder: (context, count) => GestureDetector(
+                      onTap: () => setState(() => maxLines = null),
+                      child: Container(
+                        decoration: BoxDecoration(border: Border.all()),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        child: Text(
+                          '+$count more',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.red,
                           ),
                         ),
-                        children: List.generate(
-                          itemCount,
-                          (i) => sizedChild(
-                            'Item $i',
-                            key: ValueKey('item_$i'),
-                            width: itemWidth.toDouble(),
-                          ),
-                        ),
+                      ),
+                    ),
+                    children: List.generate(
+                      itemCount,
+                      (i) => sizedChild(
+                        'Item $i',
+                        key: ValueKey('item_$i'),
+                        width: itemWidth.toDouble(),
                       ),
                     ),
                   ),
@@ -173,16 +204,19 @@ class _IntTextField extends StatelessWidget {
     required this.label,
     required this.controller,
     required this.onChanged,
+    this.enabled = true,
   });
 
   final String label;
   final TextEditingController controller;
   final ValueChanged<int> onChanged;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
+      enabled: enabled,
       keyboardType: TextInputType.number,
       inputFormatters: [
         FilteringTextInputFormatter.digitsOnly,
