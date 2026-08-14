@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:more_than_wrap/more_than_wrap.dart';
 
 void main() {
@@ -11,118 +12,93 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Slider Control Demo',
+      title: 'LimitedWrap Demo',
       theme: ThemeData(
         primarySwatch: Colors.blue,
         useMaterial3: true,
       ),
-      home: const SliderControlWidget(),
+      home: const IntFieldControlWidget(),
     );
   }
 }
 
-class SliderControlWidget extends StatefulWidget {
-  const SliderControlWidget({super.key});
+class IntFieldControlWidget extends StatefulWidget {
+  const IntFieldControlWidget({super.key});
 
   @override
-  _SliderControlWidgetState createState() => _SliderControlWidgetState();
+  State<IntFieldControlWidget> createState() => _IntFieldControlWidgetState();
 }
 
-class _SliderControlWidgetState extends State<SliderControlWidget> {
-  // Variables controlled by sliders
+class _IntFieldControlWidgetState extends State<IntFieldControlWidget> {
+  late final TextEditingController _maxLinesController;
+  late final TextEditingController _itemWidthController;
+  late final TextEditingController _itemCountController;
+
   int maxLines = 2;
-  double itemWidth = 57.0;
+  int itemWidth = 57;
   int itemCount = 13;
-  bool useBuilder = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _maxLinesController = TextEditingController(text: '$maxLines');
+    _itemWidthController = TextEditingController(text: '$itemWidth');
+    _itemCountController = TextEditingController(text: '$itemCount');
+  }
+
+  @override
+  void dispose() {
+    _maxLinesController.dispose();
+    _itemWidthController.dispose();
+    _itemCountController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Slider Control Example'),
+        title: const Text('LimitedWrap Example'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Control Panel with Sliders
             Card(
               elevation: 4,
               child: Padding(
-                padding: const EdgeInsets.all(4.0),
+                padding: const EdgeInsets.all(16),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Switch to toggle between implementations
-                    SwitchListTile(
-                      title: const Text('Use LimitedWrapWidget.builder'),
-                      value: useBuilder,
-                      onChanged: (value) {
-                        setState(() {
-                          useBuilder = value;
-                        });
-                      },
+                    _IntTextField(
+                      label: 'Max Lines',
+                      controller: _maxLinesController,
+                      onChanged: (value) => setState(() => maxLines = value),
                     ),
-                    // MaxLines Slider
-                    Text('Max Lines: ${maxLines.round()}'),
-                    Slider(
-                      value: maxLines.toDouble(),
-                      min: 1.0,
-                      max: 10.0,
-                      divisions: 9,
-                      label: maxLines.round().toString(),
-                      onChanged: (value) {
-                        setState(() {
-                          maxLines = value.toInt();
-                        });
-                      },
+                    const SizedBox(height: 12),
+                    _IntTextField(
+                      label: 'Item Width (px)',
+                      controller: _itemWidthController,
+                      onChanged: (value) => setState(() => itemWidth = value),
                     ),
-
-                    // Item Width Slider
-                    Text('Item Width: ${itemWidth.round()}px'),
-                    Slider(
-                      value: itemWidth,
-                      min: 30.0,
-                      max: 300.0,
-                      divisions: 20,
-                      label: itemWidth.round().toString(),
-                      onChanged: (value) {
-                        setState(() {
-                          itemWidth = value;
-                        });
-                      },
-                    ),
-
-                    // Spacing Slider
-                    Text('ItemCount: ${itemCount.round()}'),
-                    Slider(
-                      value: itemCount.toDouble(),
-                      min: 0.0,
-                      max: 50.0,
-                      divisions: 50,
-                      label: itemCount.round().toString(),
-                      onChanged: (value) {
-                        setState(() {
-                          itemCount = value.toInt();
-                        });
-                      },
+                    const SizedBox(height: 12),
+                    _IntTextField(
+                      label: 'Item Count',
+                      controller: _itemCountController,
+                      onChanged: (value) => setState(() => itemCount = value),
                     ),
                   ],
                 ),
               ),
             ),
-
             const SizedBox(height: 8),
-
-            // Visual demonstration area
             Text(
               'Visual Result:',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 10),
-
             Expanded(
               child: Container(
                 width: double.infinity,
@@ -131,13 +107,36 @@ class _SliderControlWidgetState extends State<SliderControlWidget> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.all(8.0),
+                  padding: const EdgeInsets.all(8),
                   child: Center(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 40.0,
+                      padding: const EdgeInsets.symmetric(horizontal: 40),
+                      child: LimitedWrapWidget(
+                        spacing: 0,
+                        runSpacing: 0,
+                        maxLines: maxLines,
+                        overflowWidgetBuilder: (context, count) => Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          child: Text(
+                            '+$count more',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.red,
+                            ),
+                          ),
+                        ),
+                        children: List.generate(
+                          itemCount,
+                          (i) => sizedChild(
+                            'Item $i',
+                            key: ValueKey('item_$i'),
+                            width: itemWidth.toDouble(),
+                          ),
+                        ),
                       ),
-                      child: limitedWrapWidget,
                     ),
                   ),
                 ),
@@ -149,49 +148,12 @@ class _SliderControlWidgetState extends State<SliderControlWidget> {
     );
   }
 
-  Widget get limitedWrapWidget => switch (useBuilder) {
-        true => LimitedWrapWidget.builder(
-            spacing: 0,
-            runSpacing: 0,
-            maxLines: maxLines.toInt(),
-            overflowWidgetBuilder: (count) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              child: Text(
-                '+${count ?? 0} more',
-                style: const TextStyle(fontSize: 14, color: Colors.red),
-              ),
-            ),
-            children: List.generate(
-              itemCount,
-              (i) => sizedChild(
-                'Item $i',
-                key: ValueKey('item_$i'),
-                width: itemWidth,
-              ),
-            ),
-          ),
-        false => LimitedWrapWidget(
-            spacing: 0,
-            runSpacing: 0,
-            maxLines: maxLines.toInt(),
-            overflowBuilderStyle: OverflowBuilderStyle(
-              textBuilder: (count) => '+$count more',
-              textStyle: const TextStyle(fontSize: 14, color: Colors.red),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            ),
-            children: List.generate(
-              itemCount,
-              (i) => sizedChild(
-                'Item $i',
-                key: ValueKey('item_$i'),
-                width: itemWidth,
-              ),
-            ),
-          ),
-      };
-
-  Widget sizedChild(String text,
-      {Key? key, double width = 60, double height = 30}) {
+  Widget sizedChild(
+    String text, {
+    Key? key,
+    double width = 60,
+    double height = 30,
+  }) {
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(4),
@@ -200,18 +162,57 @@ class _SliderControlWidgetState extends State<SliderControlWidget> {
       child: SizedBox(
         width: width,
         height: height,
-        child: Center(
-          child: Text(text, key: key),
-        ),
+        child: Center(child: Text(text, key: key)),
       ),
     );
   }
+}
 
-  SliverChildDelegate getSliverChildDelegate() {
-    return SliverChildBuilderDelegate(
-      (context, index) =>
-          sizedChild('Item $index', key: ValueKey('item_$index')),
-      childCount: 10,
+class _IntTextField extends StatelessWidget {
+  const _IntTextField({
+    required this.label,
+    required this.controller,
+    required this.onChanged,
+  });
+
+  final String label;
+  final TextEditingController controller;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      keyboardType: TextInputType.number,
+      inputFormatters: [
+        FilteringTextInputFormatter.digitsOnly,
+        const _PositiveIntFormatter(),
+      ],
+      decoration: InputDecoration(
+        labelText: label,
+        border: const OutlineInputBorder(),
+        isDense: true,
+      ),
+      onChanged: (value) {
+        if (value.isEmpty) return;
+        final parsed = int.tryParse(value);
+        if (parsed != null && parsed > 0) onChanged(parsed);
+      },
     );
+  }
+}
+
+class _PositiveIntFormatter extends TextInputFormatter {
+  const _PositiveIntFormatter();
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    if (newValue.text.isEmpty) return newValue;
+    final value = int.tryParse(newValue.text);
+    if (value == null || value <= 0) return oldValue;
+    return newValue;
   }
 }
