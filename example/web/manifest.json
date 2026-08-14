@@ -1,11 +1,11 @@
 {
-    "name": "test_project",
-    "short_name": "test_project",
+    "name": "more_than_wrap demo",
+    "short_name": "more_than_wrap",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Live demo of more_than_wrap — a Flutter Wrap with a limited number of rows and overflow indicator.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
