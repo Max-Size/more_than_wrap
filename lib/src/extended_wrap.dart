@@ -67,10 +67,7 @@ class RenderExtendedWrap extends RenderBox
        _spacing = spacing,
        _runSpacing = runSpacing;
 
-  static const _shrinkedConstraints = BoxConstraints(
-    maxWidth: 0,
-    maxHeight: 0,
-  );
+  static const _shrinkedConstraints = BoxConstraints(maxWidth: 0, maxHeight: 0);
 
   int? _maxLines;
   double _spacing;
@@ -107,9 +104,7 @@ class RenderExtendedWrap extends RenderBox
   double _dx = 0;
   double _dy = 0;
   double _maxYPerRow = 0;
-  RenderBox? _lastRenderedChild;
-  RenderBox? _penultimateRenderedChild;
-  Offset? _penultimateRenderedChildOffset;
+  final List<RenderBox> _placed = [];
 
   @override
   void setupParentData(RenderBox child) {
@@ -128,9 +123,7 @@ class RenderExtendedWrap extends RenderBox
     _dx = 0;
     _dy = 0;
     _maxYPerRow = 0;
-    _lastRenderedChild = null;
-    _penultimateRenderedChild = null;
-    _penultimateRenderedChildOffset = null;
+    _placed.clear();
 
     // Last child is the overflow slot.
     final itemCount = max(0, childCount - 1);
@@ -186,10 +179,7 @@ class RenderExtendedWrap extends RenderBox
       curIndex++;
       _dx += childSize.width + _spacing;
 
-      _penultimateRenderedChild = _lastRenderedChild;
-      _penultimateRenderedChildOffset =
-          (_lastRenderedChild?.parentData as ExtendedWrapParentData?)?.offset;
-      _lastRenderedChild = child;
+      _placed.add(child!);
       _maxYPerRow = max(_maxYPerRow, childSize.height);
 
       child = parentData.nextSibling;
@@ -197,7 +187,12 @@ class RenderExtendedWrap extends RenderBox
 
     _layoutOverflowSlot(hasOverflow);
 
-    final height = max(_dy + _maxYPerRow, constraints.minHeight);
+    var rowHeight = _maxYPerRow;
+    final overflowRender = lastChild;
+    if (hasOverflow && overflowRender != null) {
+      rowHeight = max(rowHeight, overflowRender.size.height);
+    }
+    final height = max(_dy + rowHeight, constraints.minHeight);
     size = constraints.constrain(Size(constraints.maxWidth, height));
   }
 
@@ -215,13 +210,13 @@ class RenderExtendedWrap extends RenderBox
 
     _layoutOverflowChild(overflowRender, _objectsOverflowed);
 
-    final endX = _dx + overflowRender.size.width;
-    final needsRoom = endX > constraints.maxWidth || _objectsOverflowed == 1;
-
-    if (needsRoom) {
-      _hideLastVisibleChild(overflowRender);
+    while (_overflowExceedsMaxWidth(overflowRender) &&
+        _lastPlacedIsOnCurrentRow()) {
+      _hideLastVisibleChild();
       _layoutOverflowChild(overflowRender, _objectsOverflowed);
     }
+
+    _tryCollapseOverflowOntoPreviousRow(overflowRender);
   }
 
   void _setOverflowCount(RenderBox overflowRender, int count) {
@@ -248,37 +243,82 @@ class RenderExtendedWrap extends RenderBox
     parentData.offset = Offset(_dx, _dy);
   }
 
-  void _hideLastVisibleChild(RenderBox overflowRender) {
-    final last = _lastRenderedChild;
-    if (last == null) {
+  bool _overflowExceedsMaxWidth(RenderBox overflowRender) {
+    return _dx + overflowRender.size.width > constraints.maxWidth;
+  }
+
+  bool _lastPlacedIsOnCurrentRow() {
+    if (_placed.isEmpty) {
+      return false;
+    }
+    final parentData = _placed.last.parentData! as ExtendedWrapParentData;
+    return parentData.offset.dy == _dy;
+  }
+
+  double _rowMaxHeight(double dy) {
+    var maxHeight = 0.0;
+    for (final child in _placed) {
+      final parentData = child.parentData! as ExtendedWrapParentData;
+      if (parentData.offset.dy == dy) {
+        maxHeight = max(maxHeight, child.size.height);
+      }
+    }
+    return maxHeight;
+  }
+
+  void _hideLastVisibleChild() {
+    if (_placed.isEmpty) {
       return;
     }
 
-    _dx -= last.size.width + _spacing;
-
-    // If that child alone filled the last row, try previous row.
-    if (_dx == 0 &&
-        _penultimateRenderedChildOffset != null &&
-        _penultimateRenderedChild != null) {
-      overflowRender.layout(constraints, parentUsesSize: true);
-      final overflowSize = overflowRender.size;
-      final potentialEnd =
-          _penultimateRenderedChildOffset!.dx +
-          _penultimateRenderedChild!.size.width +
-          _spacing +
-          overflowSize.width;
-
-      if (potentialEnd <= constraints.maxWidth) {
-        _dx =
-            _penultimateRenderedChildOffset!.dx +
-            _penultimateRenderedChild!.size.width +
-            _spacing;
-        _dy -= _penultimateRenderedChild!.size.height + _runSpacing;
-      }
-    }
-
+    final last = _placed.removeLast();
     last.layout(_shrinkedConstraints, parentUsesSize: true);
     _objectsOverflowed++;
+    _syncCursorToPlaced();
+  }
+
+  void _syncCursorToPlaced() {
+    if (_placed.isEmpty) {
+      _dx = 0;
+      _dy = 0;
+      _maxYPerRow = 0;
+      return;
+    }
+
+    final last = _placed.last;
+    final parentData = last.parentData! as ExtendedWrapParentData;
+    if (parentData.offset.dy == _dy) {
+      _dx = parentData.offset.dx + last.size.width + _spacing;
+      _maxYPerRow = _rowMaxHeight(_dy);
+      return;
+    }
+
+    // Current row is empty; keep it so overflow can use the full width.
+    _dx = 0;
+    _maxYPerRow = 0;
+  }
+
+  /// If the last row now contains only the overflow slot, move it onto the
+  /// previous row when it fits — avoids a nearly empty extra line.
+  void _tryCollapseOverflowOntoPreviousRow(RenderBox overflowRender) {
+    if (_placed.isEmpty || _lastPlacedIsOnCurrentRow()) {
+      return;
+    }
+
+    final last = _placed.last;
+    final parentData = last.parentData! as ExtendedWrapParentData;
+    final candidateDx = parentData.offset.dx + last.size.width + _spacing;
+    if (candidateDx + overflowRender.size.width > constraints.maxWidth) {
+      return;
+    }
+
+    _dx = candidateDx;
+    _dy = parentData.offset.dy;
+    _maxYPerRow = _rowMaxHeight(_dy);
+
+    final overflowParentData =
+        overflowRender.parentData! as ExtendedWrapParentData;
+    overflowParentData.offset = Offset(_dx, _dy);
   }
 
   @override
