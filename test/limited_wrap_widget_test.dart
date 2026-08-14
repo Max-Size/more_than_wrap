@@ -16,7 +16,6 @@ Widget sizedChild(
   );
 }
 
-/// Overflowed children stay in the tree but are laid out with zero constraints.
 void expectHidden(WidgetTester tester, Key key) {
   expect(find.byKey(key), findsOneWidget);
   expect(tester.getSize(find.byKey(key)), Size.zero);
@@ -28,87 +27,7 @@ void expectVisible(WidgetTester tester, Key key, {required Size size}) {
 }
 
 void main() {
-  group('LimitedWrapWidget (overflowBuilderStyle)', () {
-    testWidgets(
-      'limits visible children by maxLines and paints overflow text',
-      (tester) async {
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Center(
-              child: SizedBox(
-                width: 200,
-                child: LimitedWrapWidget(
-                  children: List.generate(
-                    10,
-                    (i) => sizedChild('Item $i', key: ValueKey('item_$i')),
-                  ),
-                  spacing: 0,
-                  runSpacing: 0,
-                  maxLines: 1,
-                  overflowBuilderStyle: OverflowBuilderStyle(
-                    textBuilder: (count) => '+$count more',
-                    textStyle: const TextStyle(fontSize: 14, color: Colors.red),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-
-        // Canvas overflow may steal the last chip if "+N more" is wider than
-        // the remaining space; at least the first items stay visible.
-        expectVisible(
-          tester,
-          const ValueKey('item_0'),
-          size: const Size(60, 30),
-        );
-        expectVisible(
-          tester,
-          const ValueKey('item_1'),
-          size: const Size(60, 30),
-        );
-        expectHidden(tester, const ValueKey('item_9'));
-        expect(find.textContaining('more'), findsNothing); // painted on canvas
-      },
-    );
-
-    testWidgets('does not paint overflow when all children fit', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Center(
-            child: SizedBox(
-              width: 200,
-              child: LimitedWrapWidget(
-                children: List.generate(
-                  3,
-                  (i) => sizedChild('Item $i', key: ValueKey('item_$i')),
-                ),
-                spacing: 0,
-                runSpacing: 0,
-                maxLines: 1,
-                overflowBuilderStyle: OverflowBuilderStyle(
-                  textBuilder: (count) => '+$count more',
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-      for (var i = 0; i < 3; i++) {
-        expectVisible(
-          tester,
-          ValueKey('item_$i'),
-          size: const Size(60, 30),
-        );
-      }
-    });
-  });
-
-  group('LimitedWrapWidget.builder (overflowWidgetBuilder)', () {
+  group('LimitedWrapWidget', () {
     testWidgets(
       'builds overflow widget with correct count in the first frame',
       (tester) async {
@@ -118,11 +37,7 @@ void main() {
             home: Center(
               child: SizedBox(
                 width: 200,
-                child: LimitedWrapWidget.builder(
-                  children: List.generate(
-                    10,
-                    (i) => sizedChild('Item $i', key: ValueKey('item_$i')),
-                  ),
+                child: LimitedWrapWidget(
                   spacing: 0,
                   runSpacing: 0,
                   maxLines: 1,
@@ -137,6 +52,10 @@ void main() {
                       ),
                     );
                   },
+                  children: List.generate(
+                    10,
+                    (i) => sizedChild('Item $i', key: ValueKey('item_$i')),
+                  ),
                 ),
               ),
             ),
@@ -167,11 +86,7 @@ void main() {
             home: Center(
               child: SizedBox(
                 width: 200,
-                child: LimitedWrapWidget.builder(
-                  children: List.generate(
-                    10,
-                    (i) => sizedChild('Item $i', key: ValueKey('item_$i')),
-                  ),
+                child: LimitedWrapWidget(
                   spacing: 0,
                   runSpacing: 0,
                   maxLines: 1,
@@ -186,6 +101,10 @@ void main() {
                       ),
                     );
                   },
+                  children: List.generate(
+                    10,
+                    (i) => sizedChild('Item $i', key: ValueKey('item_$i')),
+                  ),
                 ),
               ),
             ),
@@ -216,11 +135,7 @@ void main() {
           home: Center(
             child: SizedBox(
               width: 200,
-              child: LimitedWrapWidget.builder(
-                children: List.generate(
-                  3,
-                  (i) => sizedChild('Item $i', key: ValueKey('item_$i')),
-                ),
+              child: LimitedWrapWidget(
                 spacing: 0,
                 runSpacing: 0,
                 maxLines: 1,
@@ -233,6 +148,10 @@ void main() {
                     child: Text('Overflow: $count'),
                   );
                 },
+                children: List.generate(
+                  3,
+                  (i) => sizedChild('Item $i', key: ValueKey('item_$i')),
+                ),
               ),
             ),
           ),

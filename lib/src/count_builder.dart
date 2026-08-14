@@ -1,19 +1,16 @@
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 
-/// Signature for a function that builds the overflow indicator.
-///
-/// [overflowCount] is how many wrap children did not fit into [maxLines].
+/// Builds the overflow indicator from how many wrap children did not fit.
 typedef LimitedWrapOverflowBuilder =
     Widget Function(BuildContext context, int overflowCount);
 
 /// Defers building the overflow indicator until layout time, like
-/// [LayoutBuilder], but [layoutInfo] is an overflow [int] injected by the
-/// parent wrap instead of incoming constraints.
+/// [LayoutBuilder], but [layoutInfo] is an overflow [int] injected by
+/// [RenderExtendedWrap] instead of incoming constraints.
 ///
-/// Rebuild happens inside the parent's [RenderObject.performLayout] (via
-/// [RenderObject.invokeLayoutCallback]), so the first paint already shows
-/// the final overflow widget — no post-layout [ValueNotifier] frame.
+/// Rebuild runs inside [performLayout] via [invokeLayoutCallback], so the
+/// first paint already shows the final overflow widget.
 class OverflowCountBuilder extends AbstractLayoutBuilder<int> {
   const OverflowCountBuilder({super.key, required this.builder});
 
@@ -28,9 +25,8 @@ class OverflowCountBuilder extends AbstractLayoutBuilder<int> {
 
 /// Render object for [OverflowCountBuilder].
 ///
-/// Parent sets [overflowCount] immediately before calling [layout], then
-/// [performLayout] runs [runLayoutCallback] so [OverflowCountBuilder.builder]
-/// builds with that count in the same frame.
+/// Parent sets [overflowCount] before [layout]; [performLayout] then runs
+/// [runLayoutCallback] so [OverflowCountBuilder.builder] builds in-frame.
 class RenderOverflowCountBuilder extends RenderBox
     with
         RenderObjectWithChildMixin<RenderBox>,
@@ -101,7 +97,6 @@ class RenderOverflowCountBuilder extends RenderBox
 
   @override
   void performLayout() {
-    // Same order as [LayoutBuilder]: rebuild child from builder, then layout it.
     runLayoutCallback();
     if (child != null) {
       child!.layout(constraints, parentUsesSize: true);
