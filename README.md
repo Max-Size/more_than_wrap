@@ -15,6 +15,8 @@ and the Flutter guide for
 
 A Flutter package that provides a custom `Wrap`-like layout with a limited number of rows and an optional overflow indicator.
 
+[Live demo](https://max-size.github.io/more_than_wrap/)
+
 ## Features
 
 - **Limited rows**: Restrict the layout to a maximum number of lines
