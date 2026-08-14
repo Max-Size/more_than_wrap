@@ -154,10 +154,10 @@ class _SliderControlWidgetState extends State<SliderControlWidget> {
             spacing: 0,
             runSpacing: 0,
             maxLines: maxLines.toInt(),
-            overflowWidgetBuilder: (count) => Container(
+            overflowWidgetBuilder: (context, count) => Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               child: Text(
-                '+${count ?? 0} more',
+                '+$count more',
                 style: const TextStyle(fontSize: 14, color: Colors.red),
               ),
             ),

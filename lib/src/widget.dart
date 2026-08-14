@@ -1,21 +1,27 @@
 import 'package:flutter/widgets.dart';
+import 'package:more_than_wrap/src/overflow/count_builder.dart';
 import 'package:more_than_wrap/src/overflow_style.dart';
 import 'package:more_than_wrap/src/render_widgets/builder.dart';
 import 'package:more_than_wrap/src/render_widgets/styler.dart';
 
-/// Builder function for overflow widget
-///
-typedef OnWidgetsLayouted = Widget Function(int? amountOfOverflowedWidgets);
+export 'package:more_than_wrap/src/overflow/count_builder.dart'
+    show LimitedWrapOverflowBuilder;
 
-/// Custom [Wrap] widget with limited number of rows and
-/// optional widget for overflow display
+/// Custom [Wrap] with a max row count and an overflow indicator.
 ///
-class LimitedWrapWidget extends StatefulWidget {
+/// Use [LimitedWrapWidget.builder] when the overflow UI is a real [Widget]
+/// built from the overflow count (no flicker: rebuild runs during layout).
+///
+/// Use the default constructor with [overflowBuilderStyle] for the lightweight
+/// canvas-drawn indicator.
+class LimitedWrapWidget extends StatelessWidget {
   /// Children widgets
   final List<Widget> children;
 
-  /// Builder function for overflow widget
-  final OnWidgetsLayouted? overflowWidgetBuilder;
+  /// Builds the overflow indicator from the number of hidden children.
+  ///
+  /// Called during layout (same frame), not via a post-layout [ValueNotifier].
+  final LimitedWrapOverflowBuilder? overflowWidgetBuilder;
 
   /// Spacing between elements in a row
   final double spacing;
@@ -26,7 +32,7 @@ class LimitedWrapWidget extends StatefulWidget {
   /// Maximum number of rows
   final int? maxLines;
 
-  /// Style for overflow widget
+  /// Style for the canvas-drawn overflow indicator (default constructor).
   final OverflowBuilderStyle? overflowBuilderStyle;
 
   const LimitedWrapWidget({
@@ -40,7 +46,7 @@ class LimitedWrapWidget extends StatefulWidget {
 
   const LimitedWrapWidget.builder({
     super.key,
-    this.overflowWidgetBuilder,
+    required this.overflowWidgetBuilder,
     required this.children,
     required this.spacing,
     required this.runSpacing,
@@ -48,66 +54,29 @@ class LimitedWrapWidget extends StatefulWidget {
   }) : overflowBuilderStyle = null;
 
   @override
-  State<LimitedWrapWidget> createState() => _LimitedWrapWidgetState();
-}
-
-class _LimitedWrapWidgetState extends State<LimitedWrapWidget> {
-  /// Notifier that will call [widget.overflowWidgetBuilder] when receiving
-  /// the number of overflowed elements
-  ///
-  final amountOfOverflowedWidgetsNotifier = ValueNotifier<int?>(null);
-
-  /// Wrap [widget.overflowWidgetBuilder] in [ValueListenableBuilder]
-  /// to rebuild the widget when a new value becomes known
-  /// for the number of overflowed elements
-  ///
-  /// When the `onWidgetsLayouted` function is called, the notifier will receive
-  /// a new value `amountOfOverflowedWidgets` for the number of
-  /// overflowed elements, which will trigger a rebuild
-  /// of the overflow widget
-  ///
-  @override
   Widget build(BuildContext context) {
-    final overflowBuilder = widget.overflowWidgetBuilder;
+    final overflowBuilder = overflowWidgetBuilder;
     if (overflowBuilder != null) {
-      final overflowWidget = widget.overflowWidgetBuilder != null
-          ? ValueListenableBuilder<int?>(
-              valueListenable: amountOfOverflowedWidgetsNotifier,
-              builder: (context, value, child) =>
-                  widget.overflowWidgetBuilder!(value),
-            )
-          : null;
-
-      final widgets = [
-        ...widget.children,
-        if (overflowWidget != null) overflowWidget,
-      ];
-
       return LimitedWrapWidgetBuilder(
-        spacing: widget.spacing,
-        runSpacing: widget.runSpacing,
-        maxLines: widget.maxLines,
-        onWidgetsLayouted: (amountOfOverflowedWidgets) {
-          amountOfOverflowedWidgetsNotifier.value = amountOfOverflowedWidgets;
-        },
-        isOverflowWidgetAdded: overflowWidget != null,
-        children: widgets,
-      );
-    } else {
-      return LimitedWrapWidgetStyler(
-        spacing: widget.spacing,
-        runSpacing: widget.runSpacing,
-        maxLines: widget.maxLines,
-        overflowBuilderStyle: widget.overflowBuilderStyle,
-        onWidgetsLayouted: widget.overflowBuilderStyle?.textBuilder,
-        children: widget.children,
+        spacing: spacing,
+        runSpacing: runSpacing,
+        maxLines: maxLines,
+        isOverflowWidgetAdded: true,
+        children: [
+          ...children,
+          // Slot rebuilt during performLayout when the wrap knows the count.
+          OverflowCountBuilder(builder: overflowBuilder),
+        ],
       );
     }
-  }
 
-  @override
-  void dispose() {
-    amountOfOverflowedWidgetsNotifier.dispose();
-    super.dispose();
+    return LimitedWrapWidgetStyler(
+      spacing: spacing,
+      runSpacing: runSpacing,
+      maxLines: maxLines,
+      overflowBuilderStyle: overflowBuilderStyle,
+      onWidgetsLayouted: overflowBuilderStyle?.textBuilder,
+      children: children,
+    );
   }
 }

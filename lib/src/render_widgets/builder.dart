@@ -13,7 +13,6 @@ class LimitedWrapWidgetBuilder extends LimitedWrap<void> {
     super.maxLines,
     super.spacing = 0,
     super.runSpacing = 0,
-    super.onWidgetsLayouted,
   });
 
   @override
@@ -22,8 +21,16 @@ class LimitedWrapWidgetBuilder extends LimitedWrap<void> {
       runSpacing: runSpacing,
       spacing: spacing,
       isOverflowWidgetAdded: isOverflowWidgetAdded,
-      onWidgetsLayouted: onWidgetsLayouted,
       maxLines: maxLines,
     );
+  }
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    covariant ExtendedRenderWrapWidgetBuilder renderObject,
+  ) {
+    renderObject.maxLines = maxLines;
+    renderObject.onUpdate();
   }
 }
