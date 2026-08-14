@@ -140,7 +140,7 @@ class _IntFieldControlWidgetState extends State<IntFieldControlWidget> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Center(
-                  child: LimitedWrapWidget(
+                  child: LimitedWrap.builder(
                     spacing: 0,
                     runSpacing: 0,
                     maxLines: maxLines,
@@ -161,14 +161,12 @@ class _IntFieldControlWidgetState extends State<IntFieldControlWidget> {
                         ),
                       ),
                     ),
-                    children: List.generate(
-                      itemCount,
-                      (i) => sizedChild(
-                        'Item $i',
-                        key: ValueKey('item_$i'),
-                        width: itemWidth.toDouble(),
-                      ),
+                    itemBuilder: (context, i) => sizedChild(
+                      'Item $i',
+                      key: ValueKey('item_$i'),
+                      width: itemWidth.toDouble(),
                     ),
+                    itemCount: itemCount,
                   ),
                 ),
               ),

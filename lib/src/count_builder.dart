@@ -7,7 +7,7 @@ typedef LimitedWrapOverflowBuilder =
 
 /// Defers building the overflow indicator until layout time, like
 /// [LayoutBuilder], but [layoutInfo] is an overflow [int] injected by
-/// [RenderExtendedWrap] instead of incoming constraints.
+/// [RenderLimitedWrap] instead of incoming constraints.
 ///
 /// Rebuild runs inside [performLayout] via [invokeLayoutCallback], so the
 /// first paint already shows the final overflow widget.
@@ -84,7 +84,10 @@ class RenderOverflowCountBuilder extends RenderBox
   }
 
   @override
-  double? computeDryBaseline(BoxConstraints constraints, TextBaseline baseline) {
+  double? computeDryBaseline(
+    BoxConstraints constraints,
+    TextBaseline baseline,
+  ) {
     assert(
       debugCannotComputeDryLayout(
         reason:
