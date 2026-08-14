@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:more_than_wrap/more_than_wrap.dart';
 
 void main() {
@@ -16,22 +17,42 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         useMaterial3: true,
       ),
-      home: const SliderControlWidget(),
+      home: const IntFieldControlWidget(),
     );
   }
 }
 
-class SliderControlWidget extends StatefulWidget {
-  const SliderControlWidget({super.key});
+class IntFieldControlWidget extends StatefulWidget {
+  const IntFieldControlWidget({super.key});
 
   @override
-  State<SliderControlWidget> createState() => _SliderControlWidgetState();
+  State<IntFieldControlWidget> createState() => _IntFieldControlWidgetState();
 }
 
-class _SliderControlWidgetState extends State<SliderControlWidget> {
+class _IntFieldControlWidgetState extends State<IntFieldControlWidget> {
+  late final TextEditingController _maxLinesController;
+  late final TextEditingController _itemWidthController;
+  late final TextEditingController _itemCountController;
+
   int maxLines = 2;
-  double itemWidth = 57.0;
+  int itemWidth = 57;
   int itemCount = 13;
+
+  @override
+  void initState() {
+    super.initState();
+    _maxLinesController = TextEditingController(text: '$maxLines');
+    _itemWidthController = TextEditingController(text: '$itemWidth');
+    _itemCountController = TextEditingController(text: '$itemCount');
+  }
+
+  @override
+  void dispose() {
+    _maxLinesController.dispose();
+    _itemWidthController.dispose();
+    _itemCountController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,42 +69,25 @@ class _SliderControlWidgetState extends State<SliderControlWidget> {
             Card(
               elevation: 4,
               child: Padding(
-                padding: const EdgeInsets.all(4),
+                padding: const EdgeInsets.all(16),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Max Lines: $maxLines'),
-                    Slider(
-                      value: maxLines.toDouble(),
-                      min: 1,
-                      max: 10,
-                      divisions: 9,
-                      label: maxLines.toString(),
-                      onChanged: (value) {
-                        setState(() => maxLines = value.toInt());
-                      },
+                    _IntTextField(
+                      label: 'Max Lines',
+                      controller: _maxLinesController,
+                      onChanged: (value) => setState(() => maxLines = value),
                     ),
-                    Text('Item Width: ${itemWidth.round()}px'),
-                    Slider(
-                      value: itemWidth,
-                      min: 30,
-                      max: 300,
-                      divisions: 20,
-                      label: itemWidth.round().toString(),
-                      onChanged: (value) {
-                        setState(() => itemWidth = value);
-                      },
+                    const SizedBox(height: 12),
+                    _IntTextField(
+                      label: 'Item Width (px)',
+                      controller: _itemWidthController,
+                      onChanged: (value) => setState(() => itemWidth = value),
                     ),
-                    Text('ItemCount: $itemCount'),
-                    Slider(
-                      value: itemCount.toDouble(),
-                      min: 0,
-                      max: 50,
-                      divisions: 50,
-                      label: itemCount.toString(),
-                      onChanged: (value) {
-                        setState(() => itemCount = value.toInt());
-                      },
+                    const SizedBox(height: 12),
+                    _IntTextField(
+                      label: 'Item Count',
+                      controller: _itemCountController,
+                      onChanged: (value) => setState(() => itemCount = value),
                     ),
                   ],
                 ),
@@ -129,7 +133,7 @@ class _SliderControlWidgetState extends State<SliderControlWidget> {
                           (i) => sizedChild(
                             'Item $i',
                             key: ValueKey('item_$i'),
-                            width: itemWidth,
+                            width: itemWidth.toDouble(),
                           ),
                         ),
                       ),
@@ -161,5 +165,54 @@ class _SliderControlWidgetState extends State<SliderControlWidget> {
         child: Center(child: Text(text, key: key)),
       ),
     );
+  }
+}
+
+class _IntTextField extends StatelessWidget {
+  const _IntTextField({
+    required this.label,
+    required this.controller,
+    required this.onChanged,
+  });
+
+  final String label;
+  final TextEditingController controller;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      keyboardType: TextInputType.number,
+      inputFormatters: [
+        FilteringTextInputFormatter.digitsOnly,
+        const _PositiveIntFormatter(),
+      ],
+      decoration: InputDecoration(
+        labelText: label,
+        border: const OutlineInputBorder(),
+        isDense: true,
+      ),
+      onChanged: (value) {
+        if (value.isEmpty) return;
+        final parsed = int.tryParse(value);
+        if (parsed != null && parsed > 0) onChanged(parsed);
+      },
+    );
+  }
+}
+
+class _PositiveIntFormatter extends TextInputFormatter {
+  const _PositiveIntFormatter();
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    if (newValue.text.isEmpty) return newValue;
+    final value = int.tryParse(newValue.text);
+    if (value == null || value <= 0) return oldValue;
+    return newValue;
   }
 }
