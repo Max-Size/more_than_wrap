@@ -82,6 +82,8 @@ class _LimitedWrapBuilderDelegate extends _LimitedWrapChildDelegate {
 /// The default constructor takes a [children] list (widgets are created
 /// eagerly, elements are not). [LimitedWrap.builder] defers widget creation
 /// until an item is about to be laid out.
+///
+/// Layout is always horizontal, like [Wrap] with `direction: Axis.horizontal`.
 class LimitedWrap extends RenderObjectWidget {
   /// Creates a wrap from an existing [children] list.
   ///
@@ -92,8 +94,14 @@ class LimitedWrap extends RenderObjectWidget {
     required List<Widget> children,
     required this.overflowWidgetBuilder,
     this.maxLines,
-    this.spacing = 0,
-    this.runSpacing = 0,
+    this.spacing = 0.0,
+    this.runSpacing = 0.0,
+    this.alignment = WrapAlignment.start,
+    this.runAlignment = WrapAlignment.start,
+    this.crossAxisAlignment = WrapCrossAlignment.start,
+    this.textDirection,
+    this.verticalDirection = VerticalDirection.down,
+    this.clipBehavior = Clip.none,
   }) : _delegate = _LimitedWrapListDelegate(children);
 
   /// Creates a wrap that builds children on demand.
@@ -106,8 +114,14 @@ class LimitedWrap extends RenderObjectWidget {
     required IndexedWidgetBuilder itemBuilder,
     required this.overflowWidgetBuilder,
     this.maxLines,
-    this.spacing = 0,
-    this.runSpacing = 0,
+    this.spacing = 0.0,
+    this.runSpacing = 0.0,
+    this.alignment = WrapAlignment.start,
+    this.runAlignment = WrapAlignment.start,
+    this.crossAxisAlignment = WrapCrossAlignment.start,
+    this.textDirection,
+    this.verticalDirection = VerticalDirection.down,
+    this.clipBehavior = Clip.none,
   }) : assert(itemCount >= 0),
        _delegate = _LimitedWrapBuilderDelegate(
          itemCount: itemCount,
@@ -122,11 +136,35 @@ class LimitedWrap extends RenderObjectWidget {
   /// Maximum number of rows. `null` means unlimited.
   final int? maxLines;
 
-  /// Horizontal gap between items in a row.
+  /// How much space to place between children in a run in the main axis.
   final double spacing;
 
-  /// Vertical gap between rows.
+  /// How much space to place between the runs themselves in the cross axis.
   final double runSpacing;
+
+  /// How the children within a run should be placed in the main axis.
+  final WrapAlignment alignment;
+
+  /// How the runs themselves should be placed in the cross axis.
+  final WrapAlignment runAlignment;
+
+  /// How the children within a run should be aligned in the cross axis.
+  final WrapCrossAlignment crossAxisAlignment;
+
+  /// Determines the order to lay children out horizontally and how to interpret
+  /// `start` and `end` in the horizontal direction.
+  ///
+  /// Defaults to the ambient [Directionality].
+  final TextDirection? textDirection;
+
+  /// Determines the order to lay runs out vertically and how to interpret
+  /// `start` and `end` in the vertical direction.
+  final VerticalDirection verticalDirection;
+
+  /// {@macro flutter.material.Material.clipBehavior}
+  ///
+  /// Defaults to [Clip.none].
+  final Clip clipBehavior;
 
   @override
   RenderObjectElement createElement() => LimitedWrapElement(this);
@@ -138,6 +176,12 @@ class LimitedWrap extends RenderObjectWidget {
       maxLines: maxLines,
       spacing: spacing,
       runSpacing: runSpacing,
+      alignment: alignment,
+      runAlignment: runAlignment,
+      crossAxisAlignment: crossAxisAlignment,
+      textDirection: textDirection ?? Directionality.maybeOf(context),
+      verticalDirection: verticalDirection,
+      clipBehavior: clipBehavior,
     );
   }
 
@@ -149,7 +193,46 @@ class LimitedWrap extends RenderObjectWidget {
     renderObject
       ..maxLines = maxLines
       ..spacing = spacing
-      ..runSpacing = runSpacing;
+      ..runSpacing = runSpacing
+      ..alignment = alignment
+      ..runAlignment = runAlignment
+      ..crossAxisAlignment = crossAxisAlignment
+      ..textDirection = textDirection ?? Directionality.maybeOf(context)
+      ..verticalDirection = verticalDirection
+      ..clipBehavior = clipBehavior;
+  }
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties.add(IntProperty('maxLines', maxLines, defaultValue: null));
+    properties.add(DoubleProperty('spacing', spacing, defaultValue: 0.0));
+    properties.add(DoubleProperty('runSpacing', runSpacing, defaultValue: 0.0));
+    properties.add(EnumProperty<WrapAlignment>('alignment', alignment));
+    properties.add(EnumProperty<WrapAlignment>('runAlignment', runAlignment));
+    properties.add(
+      EnumProperty<WrapCrossAlignment>(
+        'crossAxisAlignment',
+        crossAxisAlignment,
+      ),
+    );
+    properties.add(
+      EnumProperty<TextDirection>(
+        'textDirection',
+        textDirection,
+        defaultValue: null,
+      ),
+    );
+    properties.add(
+      EnumProperty<VerticalDirection>(
+        'verticalDirection',
+        verticalDirection,
+        defaultValue: VerticalDirection.down,
+      ),
+    );
+    properties.add(
+      EnumProperty<Clip>('clipBehavior', clipBehavior, defaultValue: Clip.none),
+    );
   }
 }
 
@@ -359,11 +442,99 @@ class LimitedWrapElement extends RenderObjectElement
   }
 }
 
+class _Run {
+  final List<RenderBox> children = [];
+  double mainAxisExtent = 0;
+  double crossAxisExtent = 0;
+
+  void add(RenderBox child, double spacing) {
+    if (children.isNotEmpty) {
+      mainAxisExtent += spacing;
+    }
+    children.add(child);
+    mainAxisExtent += child.size.width;
+    crossAxisExtent = max(crossAxisExtent, child.size.height);
+  }
+
+  RenderBox removeLast(double spacing) {
+    final child = children.removeLast();
+    mainAxisExtent -= child.size.width;
+    if (children.isNotEmpty) {
+      mainAxisExtent -= spacing;
+    }
+    crossAxisExtent = 0;
+    for (final remaining in children) {
+      crossAxisExtent = max(crossAxisExtent, remaining.size.height);
+    }
+    return child;
+  }
+}
+
+(double, double) _distributeSpace(
+  WrapAlignment alignment,
+  double freeSpace,
+  double itemSpacing,
+  int itemCount,
+  bool flipped,
+) {
+  assert(itemCount > 0);
+  return switch (alignment) {
+    WrapAlignment.start => (flipped ? freeSpace : 0.0, itemSpacing),
+    WrapAlignment.end => _distributeSpace(
+      WrapAlignment.start,
+      freeSpace,
+      itemSpacing,
+      itemCount,
+      !flipped,
+    ),
+    WrapAlignment.spaceBetween when itemCount < 2 => _distributeSpace(
+      WrapAlignment.start,
+      freeSpace,
+      itemSpacing,
+      itemCount,
+      flipped,
+    ),
+    WrapAlignment.center => (freeSpace / 2.0, itemSpacing),
+    WrapAlignment.spaceBetween => (
+      0,
+      freeSpace / (itemCount - 1) + itemSpacing,
+    ),
+    WrapAlignment.spaceAround => (
+      freeSpace / itemCount / 2,
+      freeSpace / itemCount + itemSpacing,
+    ),
+    WrapAlignment.spaceEvenly => (
+      freeSpace / (itemCount + 1),
+      freeSpace / (itemCount + 1) + itemSpacing,
+    ),
+  };
+}
+
+double _crossAlignmentFactor(WrapCrossAlignment alignment) {
+  return switch (alignment) {
+    WrapCrossAlignment.start => 0,
+    WrapCrossAlignment.end => 1,
+    WrapCrossAlignment.center => 0.5,
+  };
+}
+
+WrapCrossAlignment _flipCrossAlignment(WrapCrossAlignment alignment) {
+  return switch (alignment) {
+    WrapCrossAlignment.start => WrapCrossAlignment.end,
+    WrapCrossAlignment.end => WrapCrossAlignment.start,
+    WrapCrossAlignment.center => WrapCrossAlignment.center,
+  };
+}
+
 /// Lays out wrap children with a max row count and an overflow slot.
 ///
 /// Children are requested from [childManager] during layout. The overflow count
 /// is injected into [RenderOverflowCountBuilder] (LayoutBuilder-style) so the
 /// indicator is built in the same frame.
+///
+/// Packing is always horizontal. [alignment], [runAlignment],
+/// [crossAxisAlignment], [textDirection] and [verticalDirection] are applied
+/// afterwards, matching [RenderWrap] with `direction: Axis.horizontal`.
 class RenderLimitedWrap extends RenderBox
     with
         ContainerRenderObjectMixin<RenderBox, LimitedWrapParentData>,
@@ -373,9 +544,21 @@ class RenderLimitedWrap extends RenderBox
     int? maxLines,
     required double spacing,
     required double runSpacing,
+    WrapAlignment alignment = WrapAlignment.start,
+    WrapAlignment runAlignment = WrapAlignment.start,
+    WrapCrossAlignment crossAxisAlignment = WrapCrossAlignment.start,
+    TextDirection? textDirection,
+    VerticalDirection verticalDirection = VerticalDirection.down,
+    Clip clipBehavior = Clip.none,
   }) : _maxLines = maxLines,
        _spacing = spacing,
-       _runSpacing = runSpacing;
+       _runSpacing = runSpacing,
+       _alignment = alignment,
+       _runAlignment = runAlignment,
+       _crossAxisAlignment = crossAxisAlignment,
+       _textDirection = textDirection,
+       _verticalDirection = verticalDirection,
+       _clipBehavior = clipBehavior;
 
   /// Creates and removes children during [performLayout].
   final LimitedWrapChildManager childManager;
@@ -383,6 +566,12 @@ class RenderLimitedWrap extends RenderBox
   int? _maxLines;
   double _spacing;
   double _runSpacing;
+  WrapAlignment _alignment;
+  WrapAlignment _runAlignment;
+  WrapCrossAlignment _crossAxisAlignment;
+  TextDirection? _textDirection;
+  VerticalDirection _verticalDirection;
+  Clip _clipBehavior;
 
   int? get maxLines => _maxLines;
   set maxLines(int? value) {
@@ -411,11 +600,65 @@ class RenderLimitedWrap extends RenderBox
     markNeedsLayout();
   }
 
+  WrapAlignment get alignment => _alignment;
+  set alignment(WrapAlignment value) {
+    if (_alignment == value) {
+      return;
+    }
+    _alignment = value;
+    markNeedsLayout();
+  }
+
+  WrapAlignment get runAlignment => _runAlignment;
+  set runAlignment(WrapAlignment value) {
+    if (_runAlignment == value) {
+      return;
+    }
+    _runAlignment = value;
+    markNeedsLayout();
+  }
+
+  WrapCrossAlignment get crossAxisAlignment => _crossAxisAlignment;
+  set crossAxisAlignment(WrapCrossAlignment value) {
+    if (_crossAxisAlignment == value) {
+      return;
+    }
+    _crossAxisAlignment = value;
+    markNeedsLayout();
+  }
+
+  TextDirection? get textDirection => _textDirection;
+  set textDirection(TextDirection? value) {
+    if (_textDirection == value) {
+      return;
+    }
+    _textDirection = value;
+    markNeedsLayout();
+  }
+
+  VerticalDirection get verticalDirection => _verticalDirection;
+  set verticalDirection(VerticalDirection value) {
+    if (_verticalDirection == value) {
+      return;
+    }
+    _verticalDirection = value;
+    markNeedsLayout();
+  }
+
+  Clip get clipBehavior => _clipBehavior;
+  set clipBehavior(Clip value) {
+    if (_clipBehavior == value) {
+      return;
+    }
+    _clipBehavior = value;
+    markNeedsPaint();
+    markNeedsSemanticsUpdate();
+  }
+
   int _objectsOverflowed = 0;
-  double _dx = 0;
-  double _dy = 0;
-  double _maxYPerRow = 0;
-  final List<RenderBox> _placed = [];
+  bool _hasVisualOverflow = false;
+  final LayerHandle<ClipRectLayer> _clipRectLayer =
+      LayerHandle<ClipRectLayer>();
 
   @override
   void setupParentData(RenderBox child) {
@@ -424,9 +667,30 @@ class RenderLimitedWrap extends RenderBox
     }
   }
 
-  @override
-  BoxConstraints get constraints =>
-      super.constraints.copyWith(minWidth: 0, minHeight: 0);
+  bool get _debugHasNecessaryDirections {
+    assert(() {
+      if (firstChild != null && childAfter(firstChild!) != null) {
+        assert(
+          textDirection != null,
+          'Horizontal $runtimeType with multiple children has a null '
+          'textDirection, so the layout order is undefined.',
+        );
+      }
+      if (alignment == WrapAlignment.start || alignment == WrapAlignment.end) {
+        assert(
+          textDirection != null,
+          'Horizontal $runtimeType with alignment $alignment has a null '
+          'textDirection, so the alignment cannot be resolved.',
+        );
+      }
+      return true;
+    }());
+    return true;
+  }
+
+  BoxConstraints get _childConstraints {
+    return BoxConstraints(maxWidth: constraints.maxWidth);
+  }
 
   bool _isOverflow(RenderBox child) {
     return (child.parentData! as LimitedWrapParentData).isOverflow;
@@ -467,17 +731,27 @@ class RenderLimitedWrap extends RenderBox
     return next;
   }
 
+  double _overflowStartDx(_Run run) {
+    if (run.children.isEmpty) {
+      return 0;
+    }
+    return run.mainAxisExtent + _spacing;
+  }
+
   @override
   void performLayout() {
+    assert(_debugHasNecessaryDirections);
     _objectsOverflowed = 0;
-    _dx = 0;
-    _dy = 0;
-    _maxYPerRow = 0;
-    _placed.clear();
+    _hasVisualOverflow = false;
 
+    final childConstraints = _childConstraints;
+    final maxWidth = constraints.maxWidth;
     final itemCount = childManager.itemCount;
+    final runs = <_Run>[];
+    var currentRun = _Run();
+    var dx = 0.0;
     var renderedRows = 1;
-    var hasOverflow = false;
+    var placedCount = 0;
     RenderBox? after;
     var nextExisting = _firstItem;
 
@@ -487,49 +761,166 @@ class RenderLimitedWrap extends RenderBox
         after: after,
         nextExisting: nextExisting,
       );
-      child.layout(constraints, parentUsesSize: true);
+      child.layout(childConstraints, parentUsesSize: true);
       final childSize = child.size;
 
       if (_maxLines != null) {
         final wouldExceedLastRow =
             renderedRows == _maxLines &&
-            _dx + childSize.width + _spacing > constraints.maxWidth;
+            dx + childSize.width + _spacing > maxWidth;
         if (renderedRows > _maxLines! || wouldExceedLastRow) {
-          hasOverflow = true;
           break;
         }
       }
 
-      if (_dx + childSize.width + _spacing > constraints.maxWidth) {
+      if (currentRun.children.isNotEmpty &&
+          dx + childSize.width + _spacing > maxWidth) {
+        runs.add(currentRun);
+        currentRun = _Run();
         renderedRows++;
-        _dx = 0;
-        _dy += _maxYPerRow + _runSpacing;
-        _maxYPerRow = 0;
+        dx = 0;
       }
 
-      final parentData = child.parentData! as LimitedWrapParentData;
-      parentData.offset = Offset(_dx, _dy);
-
-      _dx += childSize.width + _spacing;
-      _placed.add(child);
-      _maxYPerRow = max(_maxYPerRow, childSize.height);
+      currentRun.add(child, _spacing);
+      dx += childSize.width + _spacing;
+      placedCount++;
       after = child;
       nextExisting = _itemAfter(child);
     }
 
-    _objectsOverflowed = itemCount - _placed.length;
-    hasOverflow = _objectsOverflowed > 0;
-    _collectGarbage(_placed.length);
-
-    _layoutOverflowSlot(hasOverflow);
-
-    var rowHeight = _maxYPerRow;
-    final overflowRender = _overflowChild;
-    if (hasOverflow && overflowRender != null) {
-      rowHeight = max(rowHeight, overflowRender.size.height);
+    if (currentRun.children.isNotEmpty) {
+      runs.add(currentRun);
     }
-    final height = max(_dy + rowHeight, constraints.minHeight);
-    size = constraints.constrain(Size(constraints.maxWidth, height));
+
+    _objectsOverflowed = itemCount - placedCount;
+    _collectGarbage(placedCount);
+
+    if (_objectsOverflowed > 0) {
+      _insertOverflowIntoRuns(runs, childConstraints, maxWidth);
+    } else if (_overflowChild != null) {
+      invokeLayoutCallback<BoxConstraints>((_) {
+        childManager.removeOverflowSlot();
+      });
+    }
+
+    _positionRuns(runs);
+  }
+
+  void _insertOverflowIntoRuns(
+    List<_Run> runs,
+    BoxConstraints childConstraints,
+    double maxWidth,
+  ) {
+    final overflowRender = _ensureOverflow();
+    _layoutOverflowChild(overflowRender, childConstraints);
+
+    if (runs.isEmpty) {
+      final run = _Run()..add(overflowRender, _spacing);
+      runs.add(run);
+      return;
+    }
+
+    var currentRun = runs.last;
+    while (_overflowStartDx(currentRun) + overflowRender.size.width >
+            maxWidth &&
+        currentRun.children.isNotEmpty) {
+      _hideLastVisibleChild(currentRun);
+      _layoutOverflowChild(overflowRender, childConstraints);
+    }
+
+    if (currentRun.children.isEmpty && runs.length > 1) {
+      final previous = runs[runs.length - 2];
+      final candidateDx = previous.mainAxisExtent + _spacing;
+      if (candidateDx + overflowRender.size.width <= maxWidth) {
+        runs.removeLast();
+        previous.add(overflowRender, _spacing);
+        return;
+      }
+    }
+
+    currentRun.add(overflowRender, _spacing);
+  }
+
+  void _layoutOverflowChild(
+    RenderBox overflowRender,
+    BoxConstraints childConstraints,
+  ) {
+    _setOverflowCount(overflowRender, _objectsOverflowed);
+    overflowRender.layout(childConstraints, parentUsesSize: true);
+  }
+
+  void _hideLastVisibleChild(_Run run) {
+    if (run.children.isEmpty) {
+      return;
+    }
+    final last = run.removeLast(_spacing);
+    _objectsOverflowed++;
+    _destroyItem(last);
+  }
+
+  void _positionRuns(List<_Run> runs) {
+    var contentWidth = 0.0;
+    var contentHeight = 0.0;
+    if (runs.isNotEmpty) {
+      for (final run in runs) {
+        contentWidth = max(contentWidth, run.mainAxisExtent);
+      }
+      contentHeight = _runSpacing * (runs.length - 1);
+      for (final run in runs) {
+        contentHeight += run.crossAxisExtent;
+      }
+    }
+
+    size = constraints.constrain(Size(contentWidth, contentHeight));
+    _hasVisualOverflow =
+        contentWidth > size.width || contentHeight > size.height;
+
+    if (runs.isEmpty) {
+      return;
+    }
+
+    final flipMainAxis = textDirection == TextDirection.rtl;
+    final flipCrossAxis = verticalDirection == VerticalDirection.up;
+    final crossFreeSpace = max(0.0, size.height - contentHeight);
+    final effectiveCrossAlignment =
+        flipCrossAxis
+            ? _flipCrossAlignment(crossAxisAlignment)
+            : crossAxisAlignment;
+    final (runLeadingSpace, runBetweenSpace) = _distributeSpace(
+      runAlignment,
+      crossFreeSpace,
+      _runSpacing,
+      runs.length,
+      flipCrossAxis,
+    );
+
+    var runCrossOffset = runLeadingSpace;
+    final orderedRuns = flipCrossAxis ? runs.reversed : runs;
+    for (final run in orderedRuns) {
+      final mainFreeSpace = max(0.0, size.width - run.mainAxisExtent);
+      final (childLeadingSpace, childBetweenSpace) = _distributeSpace(
+        alignment,
+        mainFreeSpace,
+        _spacing,
+        run.children.length,
+        flipMainAxis,
+      );
+
+      var childMainOffset = childLeadingSpace;
+      final children = flipMainAxis ? run.children.reversed : run.children;
+      for (final child in children) {
+        final childCrossOffset =
+            _crossAlignmentFactor(effectiveCrossAlignment) *
+            (run.crossAxisExtent - child.size.height);
+        final parentData = child.parentData! as LimitedWrapParentData;
+        parentData.offset = Offset(
+          childMainOffset,
+          runCrossOffset + childCrossOffset,
+        );
+        childMainOffset += child.size.width + childBetweenSpace;
+      }
+      runCrossOffset += run.crossAxisExtent + runBetweenSpace;
+    }
   }
 
   RenderBox _ensureItem(
@@ -573,28 +964,6 @@ class RenderLimitedWrap extends RenderBox
     });
   }
 
-  void _layoutOverflowSlot(bool hasOverflow) {
-    if (!hasOverflow) {
-      if (_overflowChild != null) {
-        invokeLayoutCallback<BoxConstraints>((_) {
-          childManager.removeOverflowSlot();
-        });
-      }
-      return;
-    }
-
-    final overflowRender = _ensureOverflow();
-    _layoutOverflowChild(overflowRender, _objectsOverflowed);
-
-    while (_overflowExceedsMaxWidth(overflowRender) &&
-        _lastPlacedIsOnCurrentRow()) {
-      _hideLastVisibleChild();
-      _layoutOverflowChild(overflowRender, _objectsOverflowed);
-    }
-
-    _tryCollapseOverflowOntoPreviousRow(overflowRender);
-  }
-
   RenderBox _ensureOverflow() {
     final existing = _overflowChild;
     if (existing != null) {
@@ -622,91 +991,6 @@ class RenderLimitedWrap extends RenderBox
     });
   }
 
-  void _layoutOverflowChild(RenderBox overflowRender, int count) {
-    _setOverflowCount(overflowRender, count);
-    overflowRender.layout(constraints, parentUsesSize: true);
-    final parentData = overflowRender.parentData! as LimitedWrapParentData;
-    parentData.offset = Offset(_dx, _dy);
-  }
-
-  bool _overflowExceedsMaxWidth(RenderBox overflowRender) {
-    return _dx + overflowRender.size.width > constraints.maxWidth;
-  }
-
-  bool _lastPlacedIsOnCurrentRow() {
-    if (_placed.isEmpty) {
-      return false;
-    }
-    final parentData = _placed.last.parentData! as LimitedWrapParentData;
-    return parentData.offset.dy == _dy;
-  }
-
-  double _rowMaxHeight(double dy) {
-    var maxHeight = 0.0;
-    for (final child in _placed) {
-      final parentData = child.parentData! as LimitedWrapParentData;
-      if (parentData.offset.dy == dy) {
-        maxHeight = max(maxHeight, child.size.height);
-      }
-    }
-    return maxHeight;
-  }
-
-  void _hideLastVisibleChild() {
-    if (_placed.isEmpty) {
-      return;
-    }
-
-    final last = _placed.removeLast();
-    _objectsOverflowed++;
-    _syncCursorToPlaced();
-    _destroyItem(last);
-  }
-
-  void _syncCursorToPlaced() {
-    if (_placed.isEmpty) {
-      _dx = 0;
-      _dy = 0;
-      _maxYPerRow = 0;
-      return;
-    }
-
-    final last = _placed.last;
-    final parentData = last.parentData! as LimitedWrapParentData;
-    if (parentData.offset.dy == _dy) {
-      _dx = parentData.offset.dx + last.size.width + _spacing;
-      _maxYPerRow = _rowMaxHeight(_dy);
-      return;
-    }
-
-    // Current row is empty; keep it so overflow can use the full width.
-    _dx = 0;
-    _maxYPerRow = 0;
-  }
-
-  /// If the last row now contains only the overflow slot, move it onto the
-  /// previous row when it fits — avoids a nearly empty extra line.
-  void _tryCollapseOverflowOntoPreviousRow(RenderBox overflowRender) {
-    if (_placed.isEmpty || _lastPlacedIsOnCurrentRow()) {
-      return;
-    }
-
-    final last = _placed.last;
-    final parentData = last.parentData! as LimitedWrapParentData;
-    final candidateDx = parentData.offset.dx + last.size.width + _spacing;
-    if (candidateDx + overflowRender.size.width > constraints.maxWidth) {
-      return;
-    }
-
-    _dx = candidateDx;
-    _dy = parentData.offset.dy;
-    _maxYPerRow = _rowMaxHeight(_dy);
-
-    final overflowParentData =
-        overflowRender.parentData! as LimitedWrapParentData;
-    overflowParentData.offset = Offset(_dx, _dy);
-  }
-
   @override
   bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
     return defaultHitTestChildren(result, position: position);
@@ -714,6 +998,57 @@ class RenderLimitedWrap extends RenderBox
 
   @override
   void paint(PaintingContext context, Offset offset) {
-    defaultPaint(context, offset);
+    if (_hasVisualOverflow && clipBehavior != Clip.none) {
+      _clipRectLayer.layer = context.pushClipRect(
+        needsCompositing,
+        offset,
+        Offset.zero & size,
+        defaultPaint,
+        clipBehavior: clipBehavior,
+        oldLayer: _clipRectLayer.layer,
+      );
+    } else {
+      _clipRectLayer.layer = null;
+      defaultPaint(context, offset);
+    }
+  }
+
+  @override
+  void dispose() {
+    _clipRectLayer.layer = null;
+    super.dispose();
+  }
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties.add(IntProperty('maxLines', maxLines, defaultValue: null));
+    properties.add(EnumProperty<WrapAlignment>('alignment', alignment));
+    properties.add(DoubleProperty('spacing', spacing));
+    properties.add(EnumProperty<WrapAlignment>('runAlignment', runAlignment));
+    properties.add(DoubleProperty('runSpacing', runSpacing));
+    properties.add(
+      EnumProperty<WrapCrossAlignment>(
+        'crossAxisAlignment',
+        crossAxisAlignment,
+      ),
+    );
+    properties.add(
+      EnumProperty<TextDirection>(
+        'textDirection',
+        textDirection,
+        defaultValue: null,
+      ),
+    );
+    properties.add(
+      EnumProperty<VerticalDirection>(
+        'verticalDirection',
+        verticalDirection,
+        defaultValue: VerticalDirection.down,
+      ),
+    );
+    properties.add(
+      EnumProperty<Clip>('clipBehavior', clipBehavior, defaultValue: Clip.none),
+    );
   }
 }

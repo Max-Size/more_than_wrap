@@ -525,124 +525,25 @@ void main() {
       expect(tester.getSize(find.byType(LimitedWrap)).height, equals(120));
     });
 
-    testWidgets(
-      'places overflow on the last row next to remaining children',
-      (tester) async {
-        late int receivedOverflowCount;
-        await tester.pumpWidget(
-          wrapHarness(
-            width: 200,
-            child: LimitedWrap(
-              spacing: 0,
-              runSpacing: 0,
-              maxLines: 2,
-              overflowWidgetBuilder: (context, count) {
-                receivedOverflowCount = count;
-                return overflowChild(count);
-              },
-              children: List.generate(
-                8,
-                (i) => sizedChild('Item $i', key: ValueKey('item_$i')),
-              ),
-            ),
-          ),
-        );
-
-        for (var i = 0; i < 6; i++) {
-          expectVisible(tester, ValueKey('item_$i'), size: const Size(60, 30));
-        }
-        expectNotInTree(const ValueKey('item_6'));
-        expectNotInTree(const ValueKey('item_7'));
-        expect(find.text('Overflow: 2'), findsOneWidget);
-        expect(receivedOverflowCount, equals(2));
-
-        final wrapRect = tester.getRect(find.byType(LimitedWrap));
-        final lastItemRect = tester.getRect(find.byKey(const ValueKey('item_5')));
-        final overflowRect = tester.getRect(
-          find.byKey(const ValueKey('overflow_widget')),
-        );
-        expect(wrapRect.height, equals(60));
-        expect(overflowRect.top, equals(lastItemRect.top));
-        expect(overflowRect.left, equals(lastItemRect.right));
-        expect(overflowRect.right, lessThanOrEqualTo(wrapRect.right));
-      },
-    );
-
-    testWidgets('applies spacing and runSpacing when wrapping and overflowing', (
+    testWidgets('places overflow on the last row next to remaining children', (
       tester,
     ) async {
+      late int receivedOverflowCount;
       await tester.pumpWidget(
         wrapHarness(
           width: 200,
           child: LimitedWrap(
-            spacing: 10,
-            runSpacing: 8,
+            spacing: 0,
+            runSpacing: 0,
             maxLines: 2,
-            overflowWidgetBuilder: (context, count) => overflowChild(count),
+            overflowWidgetBuilder: (context, count) {
+              receivedOverflowCount = count;
+              return overflowChild(count);
+            },
             children: List.generate(
-              7,
+              8,
               (i) => sizedChild('Item $i', key: ValueKey('item_$i')),
             ),
-          ),
-        ),
-      );
-
-      for (var i = 0; i < 4; i++) {
-        expectVisible(tester, ValueKey('item_$i'), size: const Size(60, 30));
-      }
-      expectNotInTree(const ValueKey('item_4'));
-      expect(find.text('Overflow: 3'), findsOneWidget);
-
-      final item0 = tester.getRect(find.byKey(const ValueKey('item_0')));
-      final item1 = tester.getRect(find.byKey(const ValueKey('item_1')));
-      final item2 = tester.getRect(find.byKey(const ValueKey('item_2')));
-      final item3 = tester.getRect(find.byKey(const ValueKey('item_3')));
-      final overflowRect = tester.getRect(
-        find.byKey(const ValueKey('overflow_widget')),
-      );
-
-      expect(item1.left, equals(item0.right + 10));
-      expect(item2.top, equals(item0.bottom + 8));
-      expect(item3.left, equals(item2.right + 10));
-      expect(overflowRect.top, equals(item3.top));
-      expect(overflowRect.left, equals(item3.right + 10));
-      expect(tester.getSize(find.byType(LimitedWrap)).height, equals(68));
-    });
-
-    testWidgets('shows more rows when maxLines increases and all when unlimited', (
-      tester,
-    ) async {
-      List<Widget> items() => List.generate(
-        10,
-        (i) => sizedChild('Item $i', key: ValueKey('item_$i')),
-      );
-
-      await tester.pumpWidget(
-        wrapHarness(
-          width: 200,
-          child: LimitedWrap(
-            spacing: 0,
-            runSpacing: 0,
-            maxLines: 1,
-            overflowWidgetBuilder: (context, count) => overflowChild(count),
-            children: items(),
-          ),
-        ),
-      );
-
-      expectVisible(tester, const ValueKey('item_2'), size: const Size(60, 30));
-      expectNotInTree(const ValueKey('item_3'));
-      expect(find.text('Overflow: 7'), findsOneWidget);
-
-      await tester.pumpWidget(
-        wrapHarness(
-          width: 200,
-          child: LimitedWrap(
-            spacing: 0,
-            runSpacing: 0,
-            maxLines: 2,
-            overflowWidgetBuilder: (context, count) => overflowChild(count),
-            children: items(),
           ),
         ),
       );
@@ -651,25 +552,129 @@ void main() {
         expectVisible(tester, ValueKey('item_$i'), size: const Size(60, 30));
       }
       expectNotInTree(const ValueKey('item_6'));
-      expect(find.text('Overflow: 4'), findsOneWidget);
+      expectNotInTree(const ValueKey('item_7'));
+      expect(find.text('Overflow: 2'), findsOneWidget);
+      expect(receivedOverflowCount, equals(2));
 
-      await tester.pumpWidget(
-        wrapHarness(
-          width: 200,
-          child: LimitedWrap(
-            spacing: 0,
-            runSpacing: 0,
-            overflowWidgetBuilder: (context, count) => overflowChild(count),
-            children: items(),
-          ),
-        ),
+      final wrapRect = tester.getRect(find.byType(LimitedWrap));
+      final lastItemRect = tester.getRect(find.byKey(const ValueKey('item_5')));
+      final overflowRect = tester.getRect(
+        find.byKey(const ValueKey('overflow_widget')),
       );
-
-      for (var i = 0; i < 10; i++) {
-        expectVisible(tester, ValueKey('item_$i'), size: const Size(60, 30));
-      }
-      expectNotInTree(const ValueKey('overflow_widget'));
+      expect(wrapRect.height, equals(60));
+      expect(overflowRect.top, equals(lastItemRect.top));
+      expect(overflowRect.left, equals(lastItemRect.right));
+      expect(overflowRect.right, lessThanOrEqualTo(wrapRect.right));
     });
+
+    testWidgets(
+      'applies spacing and runSpacing when wrapping and overflowing',
+      (tester) async {
+        await tester.pumpWidget(
+          wrapHarness(
+            width: 200,
+            child: LimitedWrap(
+              spacing: 10,
+              runSpacing: 8,
+              maxLines: 2,
+              overflowWidgetBuilder: (context, count) => overflowChild(count),
+              children: List.generate(
+                7,
+                (i) => sizedChild('Item $i', key: ValueKey('item_$i')),
+              ),
+            ),
+          ),
+        );
+
+        for (var i = 0; i < 4; i++) {
+          expectVisible(tester, ValueKey('item_$i'), size: const Size(60, 30));
+        }
+        expectNotInTree(const ValueKey('item_4'));
+        expect(find.text('Overflow: 3'), findsOneWidget);
+
+        final item0 = tester.getRect(find.byKey(const ValueKey('item_0')));
+        final item1 = tester.getRect(find.byKey(const ValueKey('item_1')));
+        final item2 = tester.getRect(find.byKey(const ValueKey('item_2')));
+        final item3 = tester.getRect(find.byKey(const ValueKey('item_3')));
+        final overflowRect = tester.getRect(
+          find.byKey(const ValueKey('overflow_widget')),
+        );
+
+        expect(item1.left, equals(item0.right + 10));
+        expect(item2.top, equals(item0.bottom + 8));
+        expect(item3.left, equals(item2.right + 10));
+        expect(overflowRect.top, equals(item3.top));
+        expect(overflowRect.left, equals(item3.right + 10));
+        expect(tester.getSize(find.byType(LimitedWrap)).height, equals(68));
+      },
+    );
+
+    testWidgets(
+      'shows more rows when maxLines increases and all when unlimited',
+      (tester) async {
+        List<Widget> items() => List.generate(
+          10,
+          (i) => sizedChild('Item $i', key: ValueKey('item_$i')),
+        );
+
+        await tester.pumpWidget(
+          wrapHarness(
+            width: 200,
+            child: LimitedWrap(
+              spacing: 0,
+              runSpacing: 0,
+              maxLines: 1,
+              overflowWidgetBuilder: (context, count) => overflowChild(count),
+              children: items(),
+            ),
+          ),
+        );
+
+        expectVisible(
+          tester,
+          const ValueKey('item_2'),
+          size: const Size(60, 30),
+        );
+        expectNotInTree(const ValueKey('item_3'));
+        expect(find.text('Overflow: 7'), findsOneWidget);
+
+        await tester.pumpWidget(
+          wrapHarness(
+            width: 200,
+            child: LimitedWrap(
+              spacing: 0,
+              runSpacing: 0,
+              maxLines: 2,
+              overflowWidgetBuilder: (context, count) => overflowChild(count),
+              children: items(),
+            ),
+          ),
+        );
+
+        for (var i = 0; i < 6; i++) {
+          expectVisible(tester, ValueKey('item_$i'), size: const Size(60, 30));
+        }
+        expectNotInTree(const ValueKey('item_6'));
+        expect(find.text('Overflow: 4'), findsOneWidget);
+
+        await tester.pumpWidget(
+          wrapHarness(
+            width: 200,
+            child: LimitedWrap(
+              spacing: 0,
+              runSpacing: 0,
+              overflowWidgetBuilder: (context, count) => overflowChild(count),
+              children: items(),
+            ),
+          ),
+        );
+
+        for (var i = 0; i < 10; i++) {
+          expectVisible(tester, ValueKey('item_$i'), size: const Size(60, 30));
+        }
+        expectNotInTree(const ValueKey('overflow_widget'));
+      },
+    );
 
     testWidgets('adds and removes overflow slot when children count changes', (
       tester,
@@ -814,6 +819,228 @@ void main() {
       expectNotInTree(const ValueKey('overflow_widget'));
       expect(itemBuilderCalled, isFalse);
       expect(overflowBuilderCalled, isFalse);
+    });
+  });
+
+  group('LimitedWrap Wrap-compatible alignment', () {
+    testWidgets('alignment end packs the run towards the trailing edge', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        wrapHarness(
+          width: 200,
+          child: LimitedWrap(
+            spacing: 0,
+            runSpacing: 0,
+            alignment: WrapAlignment.end,
+            overflowWidgetBuilder: (_, count) => overflowChild(count),
+            children: List.generate(
+              3,
+              (i) => sizedChild('Item $i', key: ValueKey('item_$i')),
+            ),
+          ),
+        ),
+      );
+
+      final wrapRect = tester.getRect(find.byType(LimitedWrap));
+      final item0 = tester.getRect(find.byKey(const ValueKey('item_0')));
+      final item2 = tester.getRect(find.byKey(const ValueKey('item_2')));
+      expect(item0.left, equals(wrapRect.left + 20));
+      expect(item2.right, equals(wrapRect.right));
+    });
+
+    testWidgets('alignment center centers the run in the available width', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        wrapHarness(
+          width: 200,
+          child: LimitedWrap(
+            spacing: 0,
+            runSpacing: 0,
+            alignment: WrapAlignment.center,
+            overflowWidgetBuilder: (_, count) => overflowChild(count),
+            children: List.generate(
+              3,
+              (i) => sizedChild('Item $i', key: ValueKey('item_$i')),
+            ),
+          ),
+        ),
+      );
+
+      final wrapRect = tester.getRect(find.byType(LimitedWrap));
+      final item0 = tester.getRect(find.byKey(const ValueKey('item_0')));
+      final item2 = tester.getRect(find.byKey(const ValueKey('item_2')));
+      expect(item0.left, equals(wrapRect.left + 10));
+      expect(item2.right, equals(wrapRect.right - 10));
+    });
+
+    testWidgets('RTL start places the first child at the trailing edge', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        wrapHarness(
+          width: 200,
+          child: LimitedWrap(
+            spacing: 0,
+            runSpacing: 0,
+            textDirection: TextDirection.rtl,
+            overflowWidgetBuilder: (_, count) => overflowChild(count),
+            children: List.generate(
+              3,
+              (i) => sizedChild('Item $i', key: ValueKey('item_$i')),
+            ),
+          ),
+        ),
+      );
+
+      final wrapRect = tester.getRect(find.byType(LimitedWrap));
+      final item0 = tester.getRect(find.byKey(const ValueKey('item_0')));
+      final item2 = tester.getRect(find.byKey(const ValueKey('item_2')));
+      expect(item0.right, equals(wrapRect.right));
+      expect(item2.left, equals(wrapRect.left + 20));
+    });
+
+    testWidgets(
+      'RTL overflow sits at the leading (left) edge of the last run',
+      (tester) async {
+        await tester.pumpWidget(
+          wrapHarness(
+            width: 200,
+            child: LimitedWrap(
+              spacing: 0,
+              runSpacing: 0,
+              maxLines: 1,
+              textDirection: TextDirection.rtl,
+              overflowWidgetBuilder: (_, count) => overflowChild(count),
+              children: List.generate(
+                10,
+                (i) => sizedChild('Item $i', key: ValueKey('item_$i')),
+              ),
+            ),
+          ),
+        );
+
+        final wrapRect = tester.getRect(find.byType(LimitedWrap));
+        final item0 = tester.getRect(find.byKey(const ValueKey('item_0')));
+        final overflowRect = tester.getRect(
+          find.byKey(const ValueKey('overflow_widget')),
+        );
+        expect(item0.right, equals(wrapRect.right));
+        expect(overflowRect.left, equals(wrapRect.left));
+        expect(overflowRect.right, lessThanOrEqualTo(item0.left));
+      },
+    );
+
+    testWidgets(
+      'crossAxisAlignment end aligns shorter children to the bottom',
+      (tester) async {
+        await tester.pumpWidget(
+          wrapHarness(
+            width: 200,
+            child: LimitedWrap(
+              spacing: 0,
+              runSpacing: 0,
+              crossAxisAlignment: WrapCrossAlignment.end,
+              overflowWidgetBuilder: (_, count) => overflowChild(count),
+              children: [
+                sizedChild('A', key: const ValueKey('item_0'), height: 20),
+                sizedChild('B', key: const ValueKey('item_1'), height: 40),
+              ],
+            ),
+          ),
+        );
+
+        final item0 = tester.getRect(find.byKey(const ValueKey('item_0')));
+        final item1 = tester.getRect(find.byKey(const ValueKey('item_1')));
+        expect(item0.bottom, equals(item1.bottom));
+        expect(item0.top, equals(item1.top + 20));
+      },
+    );
+
+    testWidgets('verticalDirection up paints the first run at the bottom', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        wrapHarness(
+          width: 200,
+          child: LimitedWrap(
+            spacing: 0,
+            runSpacing: 0,
+            verticalDirection: VerticalDirection.up,
+            overflowWidgetBuilder: (_, count) => overflowChild(count),
+            children: List.generate(
+              6,
+              (i) => sizedChild('Item $i', key: ValueKey('item_$i')),
+            ),
+          ),
+        ),
+      );
+
+      final wrapRect = tester.getRect(find.byType(LimitedWrap));
+      final item0 = tester.getRect(find.byKey(const ValueKey('item_0')));
+      final item3 = tester.getRect(find.byKey(const ValueKey('item_3')));
+      expect(wrapRect.height, equals(60));
+      expect(item0.bottom, equals(wrapRect.bottom));
+      expect(item3.top, equals(wrapRect.top));
+    });
+
+    testWidgets('runAlignment end places runs at the bottom of extra height', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Center(
+            child: SizedBox(
+              width: 200,
+              height: 100,
+              child: LimitedWrap(
+                spacing: 0,
+                runSpacing: 0,
+                runAlignment: WrapAlignment.end,
+                overflowWidgetBuilder: (_, count) => overflowChild(count),
+                children: List.generate(
+                  3,
+                  (i) => sizedChild('Item $i', key: ValueKey('item_$i')),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final wrapRect = tester.getRect(find.byType(LimitedWrap));
+      final item0 = tester.getRect(find.byKey(const ValueKey('item_0')));
+      expect(wrapRect.height, equals(100));
+      expect(item0.bottom, equals(wrapRect.bottom));
+      expect(item0.top, equals(wrapRect.bottom - 30));
+    });
+
+    testWidgets('clipBehavior is accepted without changing default layout', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        wrapHarness(
+          width: 200,
+          child: LimitedWrap(
+            spacing: 0,
+            runSpacing: 0,
+            clipBehavior: Clip.hardEdge,
+            overflowWidgetBuilder: (_, count) => overflowChild(count),
+            children: List.generate(
+              3,
+              (i) => sizedChild('Item $i', key: ValueKey('item_$i')),
+            ),
+          ),
+        ),
+      );
+
+      for (var i = 0; i < 3; i++) {
+        expectVisible(tester, ValueKey('item_$i'), size: const Size(60, 30));
+      }
+      final wrapRect = tester.getRect(find.byType(LimitedWrap));
+      final item0 = tester.getRect(find.byKey(const ValueKey('item_0')));
+      expect(item0.left, equals(wrapRect.left));
     });
   });
 }
