@@ -15,7 +15,7 @@ Flutter's `Wrap` will happily grow forever. **more_than_wrap** stops after `maxL
 Only children that fit are mounted. Hidden items never sit in the tree. The overflow indicator is built **during layout**, so the first frame already has the correct count. No flash. No jump.
 
 <p align="center">
-  <img src="screenshots/overflow-chips.png" alt="Chip tags capped at two rows with a real +5 more overflow child" width="560">
+  <img src="https://raw.githubusercontent.com/Max-Size/more_than_wrap/main/screenshots/overflow-chips.png" alt="Chip tags capped at two rows with a real +5 more overflow child" width="560">
 </p>
 
 > 🎯 **Flutter 3.32+** required · [**Try the live demo →**](https://max-size.github.io/more_than_wrap/)
