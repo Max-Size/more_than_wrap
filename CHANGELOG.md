@@ -1,3 +1,9 @@
+## 1.0.1
+
+### Fixed
+
+* README screenshot now uses an absolute GitHub URL so the image renders on pub.dev.
+
 ## 1.0.0
 
 First stable release of the rewritten layout engine. Overflow is a real widget, finalized in the same layout pass, and children that do not fit are not kept in the tree.
