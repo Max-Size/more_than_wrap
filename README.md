@@ -1,133 +1,204 @@
-<!--
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
+# ✨ more_than_wrap
 
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/tools/pub/writing-package-pages).
+<p align="center">
+  <strong>Wrap with a row limit — and a real <code>+N more</code> widget.</strong>
+</p>
 
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/to/develop-packages).
--->
+<p align="center">
+  <a href="https://pub.dev/packages/more_than_wrap"><img src="https://img.shields.io/pub/v/more_than_wrap.svg?style=for-the-badge&color=0175C2" alt="pub package"></a>
+  <a href="https://max-size.github.io/more_than_wrap/"><img src="https://img.shields.io/badge/🎮_live_demo-play-FF6D00?style=for-the-badge" alt="live demo"></a>
+  <a href="https://opensource.org/licenses/BSD-3-Clause"><img src="https://img.shields.io/badge/license-BSD--3--Clause-8A2BE2?style=for-the-badge" alt="license"></a>
+</p>
 
-# more_than_wrap
+Flutter's `Wrap` will happily grow forever. **more_than_wrap** stops after `maxLines` and drops a real overflow child at the end of the last row — a chip, a button, whatever you build.
 
-A Flutter package that provides a custom `Wrap`-like layout with a limited number of rows and an optional overflow indicator.
+Only children that fit are mounted. Hidden items never sit in the tree. The overflow indicator is built **during layout**, so the first frame already has the correct count. No flash. No jump.
 
-[Live demo](https://max-size.github.io/more_than_wrap/)
+<p align="center">
+  <img src="screenshots/overflow-chips.png" alt="Chip tags capped at two rows with a real +5 more overflow child" width="560">
+</p>
 
-## Features
+> 🎯 **Flutter 3.32+** required · [**Try the live demo →**](https://max-size.github.io/more_than_wrap/)
 
-- **Limited rows**: Restrict the layout to a maximum number of lines
-- **Two overflow strategies**:
-  - **Styler API**: draw a compact indicator (text) directly on canvas via `overflowBuilderStyle`
-  - **Builder API**: provide your own `Widget` via `LimitedWrapWidget.builder`
-- **Flexible spacing**: Configure `spacing` and `runSpacing`
-- **Overflow count**: Both strategies receive the number of overflowed children
+---
 
-> Warning: The current release is experimental and may cause visible UI jank in certain cases (see details below).
+## 🌈 Features
 
-## Getting started
+| | |
+| --- | --- |
+| 📏 **Limited rows** | `maxLines` caps the height. Pass `null` and it behaves like a regular `Wrap`. |
+| 💎 **Real overflow widget** | `+3 more`, a chip, a tappable button — it's a normal child, not canvas text. |
+| 🦥 **Lazy inflate** | Overflowed children are **unmounted**. `.builder` doesn't even construct them. |
+| 🎬 **Correct first frame** | Overflow is measured and rebuilt in the **same** layout pass. |
+| 🧩 **Fits the indicator** | If `+N` is too wide, more children hide until it fits. |
+| 🧭 **Wrap-compatible packing** | `spacing`, `runSpacing`, `alignment`, `runAlignment`, `crossAxisAlignment`, RTL, `clipBehavior`. |
 
-Add this package to your `pubspec.yaml`:
+Direction is always **horizontal** (`Wrap` with `direction: Axis.horizontal`). Vertical wrap is out of scope.
+
+Perfect for tag clouds, filter chips, avatar stacks, compact label rows.
+
+---
+
+## 🚀 Getting started
 
 ```yaml
 dependencies:
-  more_than_wrap: ^0.0.1
+  more_than_wrap: ^1.0.0
 ```
 
-Then run:
 ```bash
 flutter pub get
 ```
 
-## Usage
+That's it. Import and wrap.
 
-### Option A: Styler API (drawn indicator via `overflowBuilderStyle`)
+---
 
-Use `LimitedWrapWidget` with `overflowBuilderStyle` to draw a compact text indicator (for example, "+3"). This indicator is not a separate child; it is painted directly by the render object.
+## 🧪 Usage
+
+### 📦 Children list
+
+Widgets in `children` are created up front; only those that fit are **mounted**.
 
 ```dart
 import 'package:flutter/material.dart';
 import 'package:more_than_wrap/more_than_wrap.dart';
 
-LimitedWrapWidget(
+LimitedWrap(
   maxLines: 2,
   spacing: 8,
   runSpacing: 4,
-  overflowBuilderStyle: OverflowBuilderStyle(
-    textBuilder: (count) => '+$count',
-    textStyle: const TextStyle(color: Colors.white),
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-    radius: const Radius.circular(12),
-    color: Colors.blue,
-    // Optional: tap handling for the painted indicator
-    onTap: () {
-      // Handle tap on the overflow indicator
-    },
-  ),
-  children: const [
-    Chip(label: Text('Tag 1')),
-    Chip(label: Text('Tag 2')),
-    Chip(label: Text('Tag 3')),
-    // ...
+  overflowWidgetBuilder: (context, count) {
+    return Chip(label: Text('+$count more'));
+  },
+  children: [
+    for (final tag in tags) Chip(label: Text(tag)),
   ],
 )
 ```
 
-When overflow occurs, the indicator will be painted at the end of the last visible row. The `textBuilder` receives the number of overflowed children.
+### 🏗️ Builder (lazy children)
 
-### Option B: Builder API (custom widget via `LimitedWrapWidget.builder`)
-
-Use `LimitedWrapWidget.builder` to supply your own overflow widget (e.g., a `Chip`). In this mode, the overflow indicator is added as a real child at the end.
+`itemBuilder` runs only for indices that need to be measured or shown. Everything past the visible prefix is never built.
 
 ```dart
-import 'package:flutter/material.dart';
-import 'package:more_than_wrap/more_than_wrap.dart';
-
-LimitedWrapWidget.builder(
+LimitedWrap.builder(
   maxLines: 2,
   spacing: 8,
   runSpacing: 4,
-  overflowWidgetBuilder: (count) {
-    if (count == null || count == 0) return const SizedBox.shrink();
-    return Chip(
+  itemCount: tags.length,
+  itemBuilder: (context, index) {
+    return Chip(label: Text(tags[index]));
+  },
+  overflowWidgetBuilder: (context, count) {
+    return ActionChip(
       label: Text('+$count more'),
-      backgroundColor: Colors.grey.shade300,
+      onPressed: () {
+        // Expand, open a sheet, navigate, …
+      },
     );
   },
-  children: const [
-    Chip(label: Text('Tag 1')),
-    Chip(label: Text('Tag 2')),
-    Chip(label: Text('Tag 3')),
-    // ...
-  ],
 )
 ```
 
-## Stability and known issues
+> 💡 **Rule of thumb:** `.builder` for long / expensive lists. The list constructor when the set is small and already in memory.
 
-- The current implementation of `LimitedWrapWidget.builder` is **unstable** and may cause visible UI jank (e.g., slight layout shifts during measurement/paint) in some scenarios.
-- This applies to both strategies (Styler and Builder), but may be more noticeable when the overflow state changes frequently.
+### 💥 Overflow widget
 
-We recommend testing your target screens carefully and avoiding heavy rebuilds of the overflow indicator where possible or just use plain `LimitedWrapWidget` with no worries.
+`overflowWidgetBuilder` is optional. Without it, children that do not fit are unmounted and nothing is shown in their place.
 
-## Roadmap
+When provided, it is a `LimitedWrapOverflowBuilder`:
 
-- A future, more stable variant of `LimitedWrapWidget` is planned as soon as possible. It will:
-  - Provide a more robust layout mechanism that minimizes jank
-  - Offer a convenient `Widget` API with a `builder`-like property while keeping the flexibility of the current design
+```dart
+typedef LimitedWrapOverflowBuilder = Widget Function(
+  BuildContext context,
+  int overflowCount,
+);
+```
 
-If you have specific stability requirements or API suggestions, please open an issue.
+- Called **only** when at least one child does not fit
+- `overflowCount` is always `> 0`
+- Not called at all when everything fits — the overflow slot is not even mounted
+- The returned widget is a **normal child**: layout, hit testing, animation — all work
 
-### Contributing
+If the indicator is wider than the leftover space on the last row, `LimitedWrap` hides more children (and bumps the count) until it fits. If that empties the last row and the indicator fits on the previous one — it moves there.
 
-Feel free to contribute to this package by:
-- Reporting bugs
-- Suggesting new features
-- Submitting pull requests
+### ♾️ Unlimited rows
 
-### License
+Omit `maxLines` (or pass `null`) to wrap like a regular `Wrap`. You can also omit `overflowWidgetBuilder` — overflowed children are simply not mounted.
 
-This package is licensed under the BSD 3-Clause License. See the OSI page: [BSD-3-Clause](https://opensource.org/licenses/BSD-3-Clause).
+```dart
+LimitedWrap(
+  spacing: 8,
+  runSpacing: 4,
+  children: chips,
+)
+```
+
+### 🎨 Alignment (same names as `Wrap`)
+
+```dart
+LimitedWrap(
+  maxLines: 2,
+  alignment: WrapAlignment.end,
+  runAlignment: WrapAlignment.center,
+  crossAxisAlignment: WrapCrossAlignment.center,
+  textDirection: TextDirection.rtl,
+  verticalDirection: VerticalDirection.down,
+  clipBehavior: Clip.hardEdge,
+  overflowWidgetBuilder: (context, count) => Text('+$count'),
+  children: chips,
+)
+```
+
+| Parameter | What it does |
+| --- | --- |
+| `spacing` | ↔️ Gap between children in a row |
+| `runSpacing` | ↕️ Gap between rows |
+| `alignment` | Main-axis packing inside a row (`start`, `end`, `center`, `spaceBetween`, …) |
+| `runAlignment` | Where the rows sit if there is extra height |
+| `crossAxisAlignment` | Align children within a row (`start`, `end`, `center`) |
+| `textDirection` | LTR / RTL — defaults to ambient `Directionality` |
+| `verticalDirection` | `down` (first row on top) or `up` |
+| `clipBehavior` | Clip if content overflows the incoming constraints |
+
+---
+
+## ⚙️ How it works
+
+`LimitedWrap` is not a thin wrapper around `Wrap`. It's a `RenderObjectWidget` that inflates children **during layout**, in the spirit of slivers:
+
+1. 🧱 Children are created from the start of the list until `maxLines` is filled.
+2. 🙈 Remaining items stay unmounted (`overflowCount = itemCount - placedCount`).
+3. 🎰 If `overflowCount > 0` and `overflowWidgetBuilder` is set, an overflow slot is inserted and the builder runs **inside** `performLayout` (same idea as `LayoutBuilder`). Without a builder, overflowed children are simply left unmounted.
+4. 🔁 If the overflow widget still doesn't fit, the last visible child is unmounted, the count goes up, and the indicator is laid out again — **still in that layout pass**.
+5. 📐 Positions then follow `RenderWrap` packing for a horizontal wrap.
+
+Because the overflow widget is built in-layout, the first paint already has the correct `+N`. No one-frame flash of a wrong count. No hiding overflowed widgets with opacity or `Offstage`.
+
+> ⚠️ **Intrinsic dimensions** of the overflow slot are not supported (same limitation as `LayoutBuilder`). Give the indicator a concrete size, or let it size itself from the wrap's `maxWidth`.
+
+---
+
+## 🎮 Example
+
+The [example](https://github.com/Max-Size/more_than_wrap/tree/main/example) app is a playground: tweak max lines, item width, and item count live. The web build is the [**live demo**](https://max-size.github.io/more_than_wrap/).
+
+```bash
+cd example
+flutter run
+```
+
+---
+
+## 📬 Additional information
+
+- 📚 [API reference](https://pub.dev/documentation/more_than_wrap/latest/)
+- 🐛 [Issue tracker](https://github.com/Max-Size/more_than_wrap/issues)
+- 💻 [Source](https://github.com/Max-Size/more_than_wrap)
+
+Bug reports and PRs are very welcome. Need vertical wrap (`direction: Axis.vertical`) or intrinsic sizing of the overflow slot? [Open an issue](https://github.com/Max-Size/more_than_wrap/issues).
+
+### 📄 License
+
+BSD 3-Clause. See [LICENSE](https://github.com/Max-Size/more_than_wrap/blob/main/LICENSE) and [BSD-3-Clause](https://opensource.org/licenses/BSD-3-Clause).
