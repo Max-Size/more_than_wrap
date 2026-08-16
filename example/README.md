@@ -1,16 +1,10 @@
-# test_project
+# more_than_wrap example
 
-A new Flutter project.
+Playground for [`LimitedWrap`](https://pub.dev/packages/more_than_wrap): change max lines, item width, and item count and watch the overflow indicator update in the same frame.
 
-## Getting Started
+The web build is the [live demo](https://max-size.github.io/more_than_wrap/).
 
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```bash
+cd example
+flutter run
+```

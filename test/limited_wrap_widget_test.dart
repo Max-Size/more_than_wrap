@@ -21,7 +21,11 @@ void expectNotInTree(Key key) {
 }
 
 Widget wrapHarness({required double width, required LimitedWrap child}) {
-  return MaterialApp(home: Center(child: SizedBox(width: width, child: child)));
+  return MaterialApp(
+    home: Center(
+      child: SizedBox(width: width, child: child),
+    ),
+  );
 }
 
 Widget overflowChild(int count, {double width = 20, double height = 30}) {
@@ -819,6 +823,68 @@ void main() {
       expectNotInTree(const ValueKey('overflow_widget'));
       expect(itemBuilderCalled, isFalse);
       expect(overflowBuilderCalled, isFalse);
+    });
+
+    testWidgets(
+      'omitting overflowWidgetBuilder hides extra children without an indicator',
+      (tester) async {
+        await tester.pumpWidget(
+          wrapHarness(
+            width: 200,
+            child: LimitedWrap(
+              spacing: 0,
+              runSpacing: 0,
+              maxLines: 1,
+              children: List.generate(
+                10,
+                (i) => sizedChild('Item $i', key: ValueKey('item_$i')),
+              ),
+            ),
+          ),
+        );
+
+        for (var i = 0; i < 3; i++) {
+          expectVisible(tester, ValueKey('item_$i'), size: const Size(60, 30));
+        }
+        for (var i = 3; i < 10; i++) {
+          expectNotInTree(ValueKey('item_$i'));
+        }
+        expectNotInTree(const ValueKey('overflow_widget'));
+        expect(tester.getSize(find.byType(LimitedWrap)).height, equals(30));
+      },
+    );
+
+    testWidgets('removing overflowWidgetBuilder unmounts the overflow slot', (
+      tester,
+    ) async {
+      Widget wrap({LimitedWrapOverflowBuilder? overflowBuilder}) {
+        return wrapHarness(
+          width: 200,
+          child: LimitedWrap(
+            spacing: 0,
+            runSpacing: 0,
+            maxLines: 1,
+            overflowWidgetBuilder: overflowBuilder,
+            children: List.generate(
+              10,
+              (i) => sizedChild('Item $i', key: ValueKey('item_$i')),
+            ),
+          ),
+        );
+      }
+
+      await tester.pumpWidget(
+        wrap(overflowBuilder: (context, count) => overflowChild(count)),
+      );
+      expect(find.text('Overflow: 7'), findsOneWidget);
+
+      await tester.pumpWidget(wrap());
+
+      for (var i = 0; i < 3; i++) {
+        expectVisible(tester, ValueKey('item_$i'), size: const Size(60, 30));
+      }
+      expectNotInTree(const ValueKey('item_3'));
+      expectNotInTree(const ValueKey('overflow_widget'));
     });
   });
 

@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:more_than_wrap/src/count_builder.dart';
@@ -24,6 +25,9 @@ abstract class LimitedWrapChildManager {
 
   /// Unmounts the element for [child]. Items must be removed from the end.
   void removeItem(RenderBox child);
+
+  /// Whether [LimitedWrap.overflowWidgetBuilder] is non-null.
+  bool get hasOverflowBuilder;
 
   /// Inflates the overflow slot after [after] (`null` = only child).
   void createOverflowSlot({required RenderBox? after});
@@ -84,6 +88,9 @@ class _LimitedWrapBuilderDelegate extends _LimitedWrapChildDelegate {
 /// until an item is about to be laid out.
 ///
 /// Layout is always horizontal, like [Wrap] with `direction: Axis.horizontal`.
+///
+/// [overflowWidgetBuilder] is optional. Without it, overflowed children are
+/// unmounted and no indicator is shown.
 class LimitedWrap extends RenderObjectWidget {
   /// Creates a wrap from an existing [children] list.
   ///
@@ -92,7 +99,7 @@ class LimitedWrap extends RenderObjectWidget {
   LimitedWrap({
     super.key,
     required List<Widget> children,
-    required this.overflowWidgetBuilder,
+    this.overflowWidgetBuilder,
     this.maxLines,
     this.spacing = 0.0,
     this.runSpacing = 0.0,
@@ -112,7 +119,7 @@ class LimitedWrap extends RenderObjectWidget {
     super.key,
     required int itemCount,
     required IndexedWidgetBuilder itemBuilder,
-    required this.overflowWidgetBuilder,
+    this.overflowWidgetBuilder,
     this.maxLines,
     this.spacing = 0.0,
     this.runSpacing = 0.0,
@@ -131,7 +138,9 @@ class LimitedWrap extends RenderObjectWidget {
   final _LimitedWrapChildDelegate _delegate;
 
   /// Builds the overflow indicator from the hidden-child count.
-  final LimitedWrapOverflowBuilder overflowWidgetBuilder;
+  ///
+  /// If null, overflowed children are unmounted and no indicator is shown.
+  final LimitedWrapOverflowBuilder? overflowWidgetBuilder;
 
   /// Maximum number of rows. `null` means unlimited.
   final int? maxLines;
@@ -205,6 +214,12 @@ class LimitedWrap extends RenderObjectWidget {
   @override
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
+    properties.add(
+      ObjectFlagProperty<LimitedWrapOverflowBuilder>.has(
+        'overflowWidgetBuilder',
+        overflowWidgetBuilder,
+      ),
+    );
     properties.add(IntProperty('maxLines', maxLines, defaultValue: null));
     properties.add(DoubleProperty('spacing', spacing, defaultValue: 0.0));
     properties.add(DoubleProperty('runSpacing', runSpacing, defaultValue: 0.0));
@@ -255,6 +270,9 @@ class LimitedWrapElement extends RenderObjectElement
   @override
   int get itemCount => widget._delegate.itemCount;
 
+  @override
+  bool get hasOverflowBuilder => widget.overflowWidgetBuilder != null;
+
   Widget _itemAt(int index) => widget._delegate.build(this, index);
 
   @override
@@ -298,9 +316,12 @@ class LimitedWrapElement extends RenderObjectElement
       _currentBeforeChild = before;
       _currentlyUpdatingSlot = _overflowSlot;
       try {
+        final overflowBuilder = widget.overflowWidgetBuilder;
         _overflowElement = updateChild(
           _overflowElement,
-          OverflowCountBuilder(builder: widget.overflowWidgetBuilder),
+          overflowBuilder == null
+              ? null
+              : OverflowCountBuilder(builder: overflowBuilder),
           _overflowSlot,
         );
       } finally {
@@ -348,7 +369,8 @@ class LimitedWrapElement extends RenderObjectElement
 
   @override
   void createOverflowSlot({required RenderBox? after}) {
-    if (_overflowElement != null) {
+    final overflowBuilder = widget.overflowWidgetBuilder;
+    if (_overflowElement != null || overflowBuilder == null) {
       return;
     }
     owner!.buildScope(this, () {
@@ -357,7 +379,7 @@ class LimitedWrapElement extends RenderObjectElement
       try {
         _overflowElement = updateChild(
           null,
-          OverflowCountBuilder(builder: widget.overflowWidgetBuilder),
+          OverflowCountBuilder(builder: overflowBuilder),
           _overflowSlot,
         );
       } finally {
@@ -795,7 +817,7 @@ class RenderLimitedWrap extends RenderBox
     _objectsOverflowed = itemCount - placedCount;
     _collectGarbage(placedCount);
 
-    if (_objectsOverflowed > 0) {
+    if (_objectsOverflowed > 0 && childManager.hasOverflowBuilder) {
       _insertOverflowIntoRuns(runs, childConstraints, maxWidth);
     } else if (_overflowChild != null) {
       invokeLayoutCallback<BoxConstraints>((_) {
@@ -882,10 +904,9 @@ class RenderLimitedWrap extends RenderBox
     final flipMainAxis = textDirection == TextDirection.rtl;
     final flipCrossAxis = verticalDirection == VerticalDirection.up;
     final crossFreeSpace = max(0.0, size.height - contentHeight);
-    final effectiveCrossAlignment =
-        flipCrossAxis
-            ? _flipCrossAlignment(crossAxisAlignment)
-            : crossAxisAlignment;
+    final effectiveCrossAlignment = flipCrossAxis
+        ? _flipCrossAlignment(crossAxisAlignment)
+        : crossAxisAlignment;
     final (runLeadingSpace, runBetweenSpace) = _distributeSpace(
       runAlignment,
       crossFreeSpace,

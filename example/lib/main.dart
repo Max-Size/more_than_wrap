@@ -13,10 +13,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'LimitedWrap Demo',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        useMaterial3: true,
-      ),
+      theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
       home: const IntFieldControlWidget(),
     );
   }
@@ -98,7 +95,8 @@ class _IntFieldControlWidgetState extends State<IntFieldControlWidget> {
                                   if (unlimited) {
                                     maxLines = null;
                                   } else {
-                                    maxLines = int.tryParse(
+                                    maxLines =
+                                        int.tryParse(
                                           _maxLinesController.text,
                                         ) ??
                                         2;
